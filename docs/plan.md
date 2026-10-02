@@ -139,4 +139,4 @@ Concurrency tests use separate connections and a coordinated start, and assert o
 
 | Date | Hours | What |
 |---|---|---|
-| 2026-10-02 | | Planning |
+| 2026-10-02 to 03 | 4 | Planning and three review rounds |
