@@ -39,6 +39,7 @@ None of these is stated in the assignment. Each is a choice we made and would co
 | A6 | Mortgage applications and users are seed data. This service reads them and does not manage them. | The assignment lets us represent them as we find useful. | Integrate with the systems that own them. |
 | A7 | The caller is identified by an `X-User-Id` header. This is not authentication. | Lets reviewers exercise roles locally without an identity provider. | See section D. |
 | A8 | Who decided and when are set by the server, in UTC. They are never taken from the request body. | An audit record must not be writable by the caller. | No alternative considered. |
+| A9 | A decline must carry a comment; a comment on an approval is optional. | The relationship manager needs to know what to change before resubmitting (A4). | Make the comment optional. |
 
 ## D. Deliberately out of scope
 

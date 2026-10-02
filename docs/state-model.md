@@ -69,7 +69,6 @@ These always hold. They are the input for the tests and for the invariant guard 
 | I10 | Within the same caller scope, replaying a successfully committed create with the same key and validated fields returns the stored original response without changing any state. The same key with different fields is rejected. |
 | I11 | The approved discount exposed to the mortgage process is the value of the approved revision. No approved discount is exposed through the downstream endpoint unless the request is `APPROVED`. |
 
-## Left for the API contract
+## Related
 
-- Error codes for an unknown user and for a caller whose role does not allow the action.
-- The order in which checks run when several would fail at once.
+[api-contract.md](api-contract.md) defines the endpoints, the remaining error codes (unknown user, role not allowed) and the order in which checks run when several would fail at once.
