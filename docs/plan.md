@@ -140,3 +140,4 @@ Concurrency tests use separate connections and a coordinated start, and assert o
 | Date | Hours | What |
 |---|---|---|
 | 2026-10-02 to 03 | 4 | Planning and three review rounds |
+| 2026-10-03 | 4 | Day 1: assumptions and scope, state model, API contract, review rounds |
