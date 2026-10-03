@@ -1,0 +1,6 @@
+-r requirements.in
+-c requirements.txt
+pytest
+httpx
+ruff
+pip-audit

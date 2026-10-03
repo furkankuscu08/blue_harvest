@@ -14,7 +14,8 @@ How AI agents contributed to this work, and how their output was checked. Update
 ## How output is checked
 
 - **Cross-model review.** What the builder writes is reviewed by agents on different models. I pass feedback between them and decide.
-- **Deterministic gates.** Tests, lint and a dependency audit will run in CI once the project skeleton exists. An agent cannot argue its way past them.
+- **Deterministic gates.** CI runs tests, lint and a dependency audit, and checks that the Docker image starts and is healthy. An agent cannot argue its way past them.
+- **Guardrails for the builder.** `.claude/settings.json` limits what the agent may run without asking, and hooks run ruff after each edit and show the test result when it stops. These reduce accidents; they are not a security boundary.
 - **Pull requests** say what the AI did and how I verified it. The verification part lists only what I actually did; the agent drafts it from my actions and I confirm it before merging.
 
 ## Examples
@@ -26,6 +27,7 @@ How AI agents contributed to this work, and how their output was checked. Update
 | The builder silently widened the approved-discount endpoint from the mortgage process to every user. A reviewer noticed that it contradicted the agreed plan. Reverted. | Agents drift from earlier decisions; review catches it. |
 | The builder noticed its own design flaw: with one role per user, the four-eyes rule could never fire and could not be tested. Users can now hold several roles. | An agent can catch its own errors when asked to check rules against data. |
 | The builder proposed generating the UI's idempotency key when the form opens. A reviewer clarified that this is not enough: retries must preserve both the key and the original payload. The submission lifecycle was clarified. | Reviewers sharpen the builder on subtle correctness points. |
+| The plan said a Stop hook would run the tests. While planning the skeleton, the builder noticed that a blocking hook would conflict with writing tests first: red tests are expected then, and the agent could not stop to show them. The hook only reports the result to me. | Guardrails have to fit the workflow; a strict one can work against the process it supports. |
 | After several review rounds the documents kept growing; no round removed anything. When I asked whether the plan was overengineered, we cut three planned documents. | Scope control stays a human decision. |
 
 ## Observation
