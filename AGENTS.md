@@ -19,7 +19,7 @@ Implement and fix code against these sources of truth. If the documents conflict
 2. Write the tests first and show them before implementing domain behaviour.
 3. Implement the smallest change that makes them pass.
 4. Run lint and tests.
-5. Open a small pull request using the template. Fill in all three sections. "How I verified it" lists only what the human actually did in this change (read, ran, tried, rejected); never invent checks. The human confirms it before merging.
+5. Open a small pull request using the template. It describes the change only: what changes and why. The human confirms it before merging.
 
 ## Rules
 

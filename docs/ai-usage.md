@@ -16,7 +16,7 @@ How AI agents contributed to this work, and how their output was checked. Update
 - **Cross-model review.** What the builder writes is reviewed by agents on different models. I pass feedback between them and decide.
 - **Deterministic gates.** CI runs tests, lint and a dependency audit, and checks that the Docker image starts and is healthy. An agent cannot argue its way past them.
 - **Guardrails for the builder.** `.claude/settings.json` limits what the agent may run without asking, and hooks run ruff after each edit and show the test result when it stops. These reduce accidents; they are not a security boundary.
-- **Pull requests** say what the AI did and how I verified it. The verification part lists only what I actually did; the agent drafts it from my actions and I confirm it before merging.
+- **This log** records how AI output was checked. Pull requests describe the change only; the examples below say what the agents did, what I checked and what was rejected.
 
 ## Examples
 
