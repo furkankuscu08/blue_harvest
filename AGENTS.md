@@ -32,4 +32,21 @@ Implement and fix code against these sources of truth. If the documents conflict
 
 ## Commands
 
-Added together with the project skeleton.
+```bash
+uv venv --python 3.12 && source .venv/bin/activate
+uv pip install -r requirements-dev.txt                      # set up
+pytest                                                      # tests
+ruff check . && ruff format --check .                       # lint
+pip-audit -r requirements-dev.txt --no-deps --disable-pip   # dependency audit
+uvicorn app.main:create_app --factory --reload              # run locally on :8000
+docker compose up --build                                   # run in Docker
+```
+
+After editing `requirements.in` or `requirements-dev.in`, regenerate the pinned files:
+
+```bash
+uv pip compile requirements.in -o requirements.txt --python-version 3.12
+uv pip compile requirements-dev.in -o requirements-dev.txt --python-version 3.12
+```
+
+Hooks in `.claude/settings.json` run ruff on every edited Python file and show the pytest result when the agent stops.
