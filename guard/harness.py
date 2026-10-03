@@ -28,11 +28,13 @@ import argparse
 import ast
 import filecmp
 import json
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
 import tomllib
+import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -40,7 +42,10 @@ ROOT = Path(__file__).resolve().parent.parent
 GUARD = ROOT / "guard"
 CONFIG = tomllib.loads((GUARD / "mutants.toml").read_text())
 IMAGE = "blue-harvest-guard"
-TEST_TIMEOUT_SECONDS = 120
+TEST_TIMEOUT_SECONDS = int(os.environ.get("GUARD_TEST_TIMEOUT", "120"))
+# pytest exits with 0 when all tests pass and 1 when some fail. Any other code means
+# the run was interrupted or broken, so even a partial report is not trusted.
+NORMAL_PYTEST_EXITS = (0, 1)
 
 # Not shown to the agent: they name the mutants, hold the withheld tests or
 # carry instructions meant for the builder.
@@ -117,12 +122,17 @@ def ensure_image() -> None:
     )
 
 
-def run_tests(tree: Path, paths: list[str]) -> dict[str, tuple[str, str]]:
-    """Run pytest in an isolated container. Returns {test id: (outcome, message)}."""
+def run_tests(tree: Path, paths: list[str]) -> dict[str, tuple[str, str, str]]:
+    """Run pytest in an isolated container.
+
+    Returns {test id: (outcome, message, file the test is defined in)}. A run that
+    did not end normally is a single "<run>" entry with outcome "error".
+    """
     out = Path(tempfile.mkdtemp(prefix="guard-out-"))
     out.chmod(0o777)
+    name = f"guard-{uuid.uuid4().hex[:12]}"
     command = [
-        "docker", "run", "--rm",
+        "docker", "run", "--rm", "--name", name,
         "--network", "none",
         "--read-only", "--tmpfs", "/tmp",
         "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
@@ -130,36 +140,47 @@ def run_tests(tree: Path, paths: list[str]) -> dict[str, tuple[str, str]]:
         "-v", f"{tree}:/work:ro",
         "-v", f"{out}:/out",
         IMAGE,
-        "timeout", str(TEST_TIMEOUT_SECONDS),
+        # SIGTERM at the limit, SIGKILL five seconds later if it is ignored.
+        "timeout", "--kill-after=5s", str(TEST_TIMEOUT_SECONDS),
         "python", "-m", "pytest", "-q", "-p", "no:cacheprovider",
-        "--junitxml=/out/report.xml", *paths,
+        # xunit1 records the file each test is defined in, not just where it was collected.
+        "-o", "junit_family=xunit1", "--junitxml=/out/report.xml", *paths,
     ]  # fmt: skip
-    finished = subprocess.run(command, capture_output=True, text=True)
+    try:
+        finished = subprocess.run(
+            command, capture_output=True, text=True, timeout=TEST_TIMEOUT_SECONDS + 30
+        )
+    except subprocess.TimeoutExpired:
+        subprocess.run(["docker", "kill", name], capture_output=True)
+        return {"<run>": ("error", "the container did not stop in time", "")}
+    if finished.returncode in (124, 137):
+        return {"<run>": ("error", f"timeout after {TEST_TIMEOUT_SECONDS}s", "")}
     report = out / "report.xml"
-    if finished.returncode == 124 or not report.exists():
-        reason = "timeout" if finished.returncode == 124 else finished.stdout[-500:]
-        return {"<run>": ("error", reason)}
+    if finished.returncode not in NORMAL_PYTEST_EXITS or not report.exists():
+        last_line = (finished.stdout.strip().splitlines() or [""])[-1]
+        return {"<run>": ("error", f"pytest exit {finished.returncode}: {last_line}", "")}
     return parse_junit(report)
 
 
-def parse_junit(report: Path) -> dict[str, tuple[str, str]]:
+def parse_junit(report: Path) -> dict[str, tuple[str, str, str]]:
     results = {}
     for case in ET.parse(report).iter("testcase"):
         module = case.get("classname", "").replace(".", "/")
         test_id = f"{module}.py::{case.get('name')}" if module else case.get("name")
+        defined_in = case.get("file", "")
         failure, error = case.find("failure"), case.find("error")
         if failure is not None:
-            results[test_id] = ("failed", failure.get("message", ""))
+            results[test_id] = ("failed", failure.get("message", ""), defined_in)
         elif error is not None:
-            results[test_id] = ("error", error.get("message", ""))
+            results[test_id] = ("error", error.get("message", ""), defined_in)
         elif case.find("skipped") is not None:
-            results[test_id] = ("skipped", "")
+            results[test_id] = ("skipped", "", defined_in)
         else:
-            results[test_id] = ("passed", "")
+            results[test_id] = ("passed", "", defined_in)
     return results
 
 
-def classify(baseline: tuple[str, str], mutant: tuple[str, str]) -> str:
+def classify(baseline: tuple, mutant: tuple) -> str:
     if baseline[0] != "passed":
         return "invalid run"
     if mutant[0] == "passed":
@@ -179,11 +200,11 @@ def prove(mutant: str) -> int:
         apply_mutant(mutated, mutant)
         on_mutant = run_tests(mutated, ["tests"])
 
-    not_passing = [t for t, (outcome, _) in baseline.items() if outcome != "passed"]
+    not_passing = [t for t, (outcome, *_) in baseline.items() if outcome != "passed"]
     if not_passing:
         print(f"Baseline is not green: {not_passing}")
         return 1
-    broken = sorted(t for t, (outcome, _) in on_mutant.items() if outcome != "passed")
+    broken = sorted(t for t, (outcome, *_) in on_mutant.items() if outcome != "passed")
     print(f"{len(baseline)} tests pass on the baseline. Failing on {mutant}:")
     for test_id in broken:
         print(f"  {test_id}")
@@ -211,7 +232,7 @@ def prepare(mutant: str, workspace: Path) -> int:
         on_mutant = run_tests(mutated, ["tests"])
 
     for name, results in (("baseline", on_baseline), ("mutant", on_mutant)):
-        not_passing = [t for t, (outcome, _) in results.items() if outcome != "passed"]
+        not_passing = [t for t, (outcome, *_) in results.items() if outcome != "passed"]
         if not_passing:
             print(f"The remaining tests do not all pass on the {name}: {not_passing}")
             return 1
@@ -255,7 +276,9 @@ def verify(
     with tempfile.TemporaryDirectory(prefix="guard-") as tmp:
         trees = {}
         for name in ("baseline", "mutant"):
-            tree = export_baseline(Path(tmp) / name)
+            # The agent's own copy: the reference tests are absent here too, so the
+            # agent's files cannot bring them back by importing them.
+            tree = build_workspace(mutant, Path(tmp) / name)
             if name == "mutant":
                 apply_mutant(tree, mutant)
             for relative in added:
@@ -264,6 +287,17 @@ def verify(
         paths = [str(p) for p in added]
         on_baseline = run_tests(trees["baseline"], paths)
         on_mutant = run_tests(trees["mutant"], paths)
+
+    # Only tests defined in the agent's files count. Tests imported from existing
+    # files are not the agent's work.
+    defined_elsewhere = {
+        result[2]
+        for result in [*on_baseline.values(), *on_mutant.values()]
+        if result[2] and result[2] not in paths
+    }
+    if defined_elsewhere:
+        violations.append(f"runs tests defined in {sorted(defined_elsewhere)}")
+        print(f"Rule violation, so every result is an invalid run: {violations[-1]}")
 
     rows = []
     for test_id in sorted(set(on_baseline) | set(on_mutant)):
@@ -282,10 +316,10 @@ def verify(
 
 
 def calibrate(mutant: str) -> int:
-    """Each file in guard/calibration/ is named after the result it must get."""
+    """Each file in guard/calibration/ is named <expected result>[__<case>].py."""
     ok = True
     for sample in sorted((GUARD / "calibration").glob("*.py")):
-        expected = sample.stem.replace("_", " ")
+        expected = sample.stem.split("__")[0].replace("_", " ")
         with tempfile.TemporaryDirectory(prefix="guard-") as tmp:
             workspace = build_workspace(mutant, Path(tmp) / "workspace")
             shutil.copy(sample, workspace / "tests" / f"test_calibration_{sample.stem}.py")
