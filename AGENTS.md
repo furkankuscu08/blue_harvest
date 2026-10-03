@@ -30,6 +30,11 @@ Implement and fix code against these sources of truth. If the documents conflict
 - If something is not covered by the documents, ask before adding it.
 - Test names describe behaviour, for example `test_stale_version_cannot_approve`.
 
+## Database access
+
+- An endpoint that changes data uses only the write session; its checks and its writes run in that one transaction.
+- Build the response before commit and return it only after the commit succeeds. Do not read ORM objects after commit: with `expire_on_commit` they are reloaded and may show someone else's later change.
+
 ## Commands
 
 ```bash
