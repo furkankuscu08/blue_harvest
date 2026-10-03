@@ -1,41 +1,82 @@
 # AI usage
 
-How AI agents contributed to this work, and how their output was checked. Updated as the work happens.
+How AI agents contributed to this work, and how their output was checked. Updated as the work happens. Every example links to the pull request or file where it can be checked. For the planning phase the link shows the outcome; the discussion itself happened in agent conversations.
 
 ## Roles
 
 | Role | Tool and model | Used for |
 |---|---|---|
-| Builder | Claude Code, Claude Opus 5.5 | Drafting plans and documents, writing code and tests. |
-| Reviewer | opencode, GPT 6 Astra | Independent review of plans and documents. |
-| Reviewer | opencode, Qwen 3.8 Max | Independent review of plans and documents. |
+| Builder | Claude Code, Claude Opus 5.5 | Plans, documents, tests and code. |
+| Reviewer | opencode, GPT 6 Astra | Independent review of plans, tests and code. |
+| Reviewer | opencode, Qwen 3.8 Max | Independent review of plans, tests and code. |
+| Guard agent | Claude Code, Claude Sonnet 5.5, restricted permissions | Writes tests against a planted defect in the [invariant guard](../guard/README.md) experiment. |
 | Decision maker | Me | Every decision. Nothing is merged without my review. |
 
 ## How output is checked
 
-- **Cross-model review.** What the builder writes is reviewed by agents on different models. I pass feedback between them and decide.
-- **Deterministic gates.** CI runs tests, lint and a dependency audit, and checks that the Docker image starts and is healthy. An agent cannot argue its way past them.
-- **Guardrails for the builder.** `.claude/settings.json` limits what the agent may run without asking, and hooks run ruff after each edit and show the test result when it stops. These reduce accidents; they are not a security boundary.
-- **This log** records how AI output was checked. Pull requests describe the change only; the examples below say what the agents did, what I checked and what was rejected.
+In the order of the workflow:
+
+1. **Plan first.** The builder proposes, reviewers on other models critique, and I decide. Scope is cut when it grows.
+2. **Tests before code.** Tests are reviewed before anything is implemented, with one question: which wrong implementation would still pass?
+3. **Hand mutants.** After implementing, the builder breaks the code on purpose. Each break must make a test fail.
+4. **Deterministic gates.** CI runs tests, lint and a dependency audit, and checks that the Docker image starts and is healthy. An agent cannot argue its way past them.
+5. **Guardrails for the builder.** `.claude/settings.json` limits what the agent may run without asking; hooks run ruff after each edit and report the test result when it stops. They reduce accidents; they are not a security boundary.
+6. **Cross-model review of every pull request.** I pass the findings to the builder, read its evaluation of each, and decide.
+7. **My own checks.** Before merging an API change I run the main story against the service myself, first done for [#13].
+
+Pull requests describe the change only. This log records what the agents did, what was checked and what was rejected.
 
 ## Examples
 
-| What happened | What it shows |
-|---|---|
-| A reviewer proposed PostgreSQL in Docker to show realistic concurrency. Rejected: SQLite needs no setup and its constraints and transactions are real. PostgreSQL is listed as a production change instead. | Agent suggestions are weighed against the assignment, not followed by default. |
-| One of the planned mutants for the agent demo was "duplicate create on retry". A reviewer noted that the planned unique constraint would still prevent duplicate rows. The mutant was reframed to test broken idempotent replay rather than duplicate creation. | A second model finds flaws the first one misses. |
-| The builder silently widened the approved-discount endpoint from the mortgage process to every user. A reviewer noticed that it contradicted the agreed plan. Reverted. | Agents drift from earlier decisions; review catches it. |
-| The builder noticed its own design flaw: with one role per user, the four-eyes rule could never fire and could not be tested. Users can now hold several roles. | An agent can catch its own errors when asked to check rules against data. |
-| The builder proposed generating the UI's idempotency key when the form opens. A reviewer clarified that this is not enough: retries must preserve both the key and the original payload. The submission lifecycle was clarified. | Reviewers sharpen the builder on subtle correctness points. |
-| The plan said a Stop hook would run the tests. While planning the skeleton, the builder noticed that a blocking hook would conflict with writing tests first: red tests are expected then, and the agent could not stop to show them. The hook only reports the result to me. | Guardrails have to fit the workflow; a strict one can work against the process it supports. |
-| The plan said that `BEGIN IMMEDIATE` needs explicit setup under SQLAlchemy and must be proven. The builder wrote the tests first and ran them on the driver defaults. Two concurrent read-modify-write increments ended at 1 instead of 2, with no error, in 10 of 10 runs. After the change the test passed 50 of 50 runs. | A concurrency claim is accepted only with a test that fails without the fix. |
-| The domain tests were reviewed before any implementation existed. A reviewer found four places where a wrong implementation would still pass, for example a decline attached to the first revision instead of the latest. The tests were restructured. After implementing, the builder applied those wrong implementations by hand and the tests caught each one. The restructure itself had lost two cases, a version newer than the current one; the builder's own mutants missed it, and the PR review caught it. | Reviewing tests against "which wrong code would pass?" finds gaps that reading them does not. |
-| During that check two different mutants failed exactly the same tests. The builder distrusted the match and found that Python had reused the previous mutant's cached bytecode: same file size, written within the same second. Each run now gets its own bytecode cache. | A check that passes can still be wrong; the agent harness needs the same guard. |
-| Invariant guard, first run. The stale-approval mutant was proven, its reference tests were withheld, and Claude Sonnet 5.5 ran with restricted permissions on the PR diff. Its tests caught the mutant in 4 of 4 cases, checked by the LLM-free harness and confirmed by me. The gap was easy to spot by symmetry, and the prompt's example test name hinted at the topic; both limits are recorded with the run. A preflight run had shown that the agent cannot write inside a `.claude` directory. In review, a second agent showed that the harness itself could report false catches: a test file that only imported the existing tests brought back the withheld reference tests, and an interrupted run still counted. Both cases, and a hard time limit, are now part of the harness and its calibration; the recorded result still holds. | An agent's output is accepted only after a deterministic check, and its limits are reported along with the result. |
-| After several review rounds the documents kept growing; no round removed anything. When I asked whether the plan was overengineered, we cut three planned documents. | Scope control stays a human decision. |
+### Reviewers find what the builder misses
 
-## Observation
+- The builder silently widened the approved-discount endpoint from the mortgage process to every user. A reviewer saw that it contradicted the plan. Reverted. [#3]
+- A planned mutant, "duplicate create on retry", could not work: the unique constraint already prevents a second row. It became "idempotent replay broken". [plan](plan.md)
+- For the UI's idempotency key, a reviewer pointed out that a retry must keep the original payload as well as the key. [plan](plan.md)
+- The API tests went through two review rounds before any code existed: 14 findings, then 6. One added a test that makes the idempotency record fail to store. After implementing, it was the only test that caught a hand mutant that commits the request before its record. [#13]
+- A test restructure lost two cases, a version newer than the current one. The builder's own mutants missed it; the PR review caught it. [#9]
+- Seeding checked only the users table, so a database with other rows was seeded again. Fixed with a regression test. [#12]
+- A body that is not valid UTF-8 got the framework's plain 400 instead of the contract's error body. Fixed with a test. [#13]
 
-Review rounds found real defects early on, then mostly added detail that would be settled while writing code. From day 2 on, reviews will look at working code instead of document text.
+### Suggestions are weighed, not followed
 
-Even this log needed review: a reviewer found three overstated claims in its first version (work described as done before it existed, a reviewer's finding made stronger than it was, and a database constraint credited with an HTTP response). They were corrected.
+- PostgreSQL in Docker, to show realistic concurrency: rejected. SQLite needs no setup and its constraints and transactions are real. PostgreSQL is listed as a production change. [scope](assumptions-and-scope.md)
+- Trimming whitespace from `outcome`: rejected, because it is a code, not text. The contract now names the trimmed fields, and a test pins the rule. [#13]
+- A test that replays after an app restart: rejected. Idempotency records live in a table, so an in-memory cache is not a plausible wrong implementation. [#13]
+- A test for a configurable discount limit: the setting was removed instead, because nobody needs it. The limit is now a constant (A5). [#13]
+
+### The builder is wrong too
+
+- With one role per user, the four-eyes rule could never fire. The builder caught this itself when asked to check the rules against the seed data. Users can now hold several roles. [#3]
+- A planned Stop hook that blocks on failing tests would have fought test-first, where red tests are expected. The hook only reports. [#6]
+- The edit hook removed imports added one edit before the code that used them. Unused imports are now reported, not removed. [#12]
+- The builder said a wrongly sorted import "would fix itself". It did not, and the local ruff cache hid it. CI caught it. [#12]
+- This log needed review too: its first version had three overstated claims. [#5]
+
+### A claim counts only with a check that fails without it
+
+- `BEGIN IMMEDIATE`: on the driver defaults, two concurrent read-modify-write increments ended at 1 instead of 2 in 10 of 10 runs. After the change: 2, in 50 of 50 runs. [#7]
+- Two different mutants failed exactly the same tests. The builder distrusted the match: Python had reused cached bytecode from the previous mutant. Each run now gets its own cache. [#9]
+- Invariant guard, first run: Claude Sonnet 5.5 wrote tests that caught the stale-approval mutant in 4 of 4 cases, checked by an LLM-free harness and confirmed by me. In review, a second agent showed that the harness itself could report false catches; those cases are now part of its calibration. Limits are recorded with the [run](../guard/runs/2026-10-03-stale-approval/result.md). [#10]
+
+### I decide rules and scope
+
+- When documents kept growing over review rounds, I asked whether the plan was overengineered. Three planned documents were cut on day 1. After day 3, the ADRs, a guard subagent and the authorisation mutant were dropped. [#11]
+- I made a comment mandatory for approvals as well as declines, and proposed a minimum of 20 characters. The builder argued against the minimum: it does not ensure quality, and 20 is arbitrary. I dropped it. [#13]
+- Before merging the first API slice I ran a smoke script against the service in Docker: create, replay, stale retry, the downstream read and four-eyes. 10 of 10 checks passed. [#13]
+
+## What I learned so far
+
+- Reviewing tests before the code exists found the most real defects. Reviewing documents found real flaws at first, then mostly added detail.
+- A passing check can still be wrong: a cached result, a reused bytecode file, an assertion that accepts any error. Agents need the same distrust as humans.
+- An agent's "this passes" or "this will fix itself" is a claim, not evidence. It counts after a test, CI or a run I watched.
+
+[#3]: https://github.com/furkankuscu08/blue_harvest/pull/3
+[#5]: https://github.com/furkankuscu08/blue_harvest/pull/5
+[#6]: https://github.com/furkankuscu08/blue_harvest/pull/6
+[#7]: https://github.com/furkankuscu08/blue_harvest/pull/7
+[#9]: https://github.com/furkankuscu08/blue_harvest/pull/9
+[#10]: https://github.com/furkankuscu08/blue_harvest/pull/10
+[#11]: https://github.com/furkankuscu08/blue_harvest/pull/11
+[#12]: https://github.com/furkankuscu08/blue_harvest/pull/12
+[#13]: https://github.com/furkankuscu08/blue_harvest/pull/13
