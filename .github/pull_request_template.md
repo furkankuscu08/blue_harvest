@@ -8,4 +8,4 @@
 
 ## How I verified it
 
-<!-- Written by me, in my own words: what I read, ran or tried, and what convinced me it is right. -->
+<!-- Only what I actually did: what I read, ran, tried or rejected. The agent drafts it from my actions; I confirm it before merging. -->

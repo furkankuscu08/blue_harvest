@@ -15,7 +15,7 @@ How AI agents contributed to this work, and how their output was checked. Update
 
 - **Cross-model review.** What the builder writes is reviewed by agents on different models. I pass feedback between them and decide.
 - **Deterministic gates.** Tests, lint and dependency audit run in CI. An agent cannot argue its way past them.
-- **Pull requests** say what the AI did and how I verified it. I write the verification part myself.
+- **Pull requests** say what the AI did and how I verified it. The verification part lists only what I actually did; the agent drafts it from my actions and I confirm it before merging.
 
 ## Examples
 

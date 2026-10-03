@@ -19,7 +19,7 @@ If code and these documents disagree, stop and ask. Do not silently pick one.
 2. Write the tests first and show them before implementing domain behaviour.
 3. Implement the smallest change that makes them pass.
 4. Run lint and tests.
-5. Open a small pull request using the template. Fill in "What the AI did"; leave "How I verified it" for the human.
+5. Open a small pull request using the template. Fill in both sections. "How I verified it" lists only what the human actually did in this change (read, ran, tried, rejected); never invent checks. The human confirms it before merging.
 
 ## Rules
 
