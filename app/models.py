@@ -114,4 +114,19 @@ class Decision(Base):
     outcome: Mapped[Outcome]
     decided_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
     decided_at: Mapped[datetime]
-    comment: Mapped[str | None] = mapped_column(Text)
+    # A9: every decision carries a comment.
+    comment: Mapped[str] = mapped_column(Text)
+
+
+class IdempotencyRecord(Base):
+    """A successful create, kept so that a retry with the same key gets the same answer."""
+
+    __tablename__ = "idempotency_records"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    key: Mapped[str] = mapped_column(String(255), primary_key=True)
+    # The validated fields as canonical JSON, compared on every retry.
+    request_payload: Mapped[str] = mapped_column(Text)
+    # The JSON body of the 201 response, replayed as it was first sent.
+    response_body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime]

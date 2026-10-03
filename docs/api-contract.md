@@ -18,7 +18,7 @@ These apply to every request body.
 
 - Whole-number fields accept JSON integers only. Strings, booleans and decimals are rejected, not converted.
 - Unknown fields are rejected. A client that sends `decided_by`, for example, gets an error and is not silently ignored.
-- Text fields are trimmed of leading and trailing whitespace before any other rule is applied. The trimmed value is what is stored and what idempotency compares.
+- Text fields (`application_id`, `reason`, `comment`) are trimmed of leading and trailing whitespace before any other rule is applied. The trimmed value is what is stored and what idempotency compares. `outcome` is a code, not text, and must match exactly.
 
 ### Errors
 
@@ -98,7 +98,7 @@ Returned by `GET /requests/{id}` and by every successful create, revise and deci
         "outcome": "APPROVED",
         "decided_by": "carol",
         "decided_at": "2026-10-05T11:30:00Z",
-        "comment": null
+        "comment": "Matches a documented competing offer."
       }
     }
   ]
@@ -120,7 +120,7 @@ Consistency guarantees:
 |---|---|
 | `Idempotency-Key` header | Required. 1 to 255 characters. Scoped to the caller. |
 | `application_id` | Required. |
-| `discount_bps` | Required. Whole number from 1 to the configured limit. The limit defaults to 200. |
+| `discount_bps` | Required. Whole number from 1 to 200 (assumption A5). |
 | `reason` | Required. Not blank, at most 1000 characters. |
 
 Returns `201` with the request detail: status `PENDING`, one revision, version 1.
@@ -170,7 +170,7 @@ Returns `200` with the request detail, or `404 REQUEST_NOT_FOUND`.
 | Input | Rule |
 |---|---|
 | `expected_version` | Required. Positive whole number: the version the caller saw. |
-| `discount_bps` | Required. Whole number from 1 to the configured limit. |
+| `discount_bps` | Required. Whole number from 1 to 200 (assumption A5). |
 | `reason` | Required. Not blank, at most 1000 characters. |
 
 Returns `201` with the request detail: a new revision, status `PENDING`, version increased by one.
@@ -183,13 +183,13 @@ Returns `201` with the request detail: a new revision, status `PENDING`, version
 |---|---|
 | `expected_version` | Required. Positive whole number: the version the caller saw. |
 | `outcome` | Required. `APPROVED` or `DECLINED`. |
-| `comment` | Required and not blank for `DECLINED`; optional for `APPROVED`. At most 1000 characters. |
+| `comment` | Required and not blank, for both outcomes. At most 1000 characters. |
 
 Returns `201` with the request detail: a decision on the latest revision, status `APPROVED` or `DECLINED`, version increased by one.
 
 `outcome` uses the same two values in the request and in the stored decision. `PENDING` is a request status only, never an outcome.
 
-A decline needs a comment so that the relationship manager knows what to change before resubmitting. This is our assumption A9.
+Every decision needs a comment: a decline tells the relationship manager what to change before resubmitting, and an approval records why the exception is justified. This is our assumption A9.
 
 ## Business checks for revise and decide
 

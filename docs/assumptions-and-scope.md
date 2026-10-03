@@ -35,11 +35,11 @@ None of these is stated in the assignment. Each is a choice we made and would co
 | A2 | Four-eyes: the person who created a request cannot decide on it. | Standard separation of duties in financial services. | Revise the separation-of-duties policy and its tests. |
 | A3 | Only the manager who created a request can revise it. | Keeps A2 meaningful: nobody can change a request and then approve their own change. | Track who authored each revision and apply four-eyes per revision. |
 | A4 | A declined request can be revised and resubmitted. An approval is final. | Explains "previous decisions" in R4, and gives a declined request a way forward under A1. | Make decline final and allow a new request instead. This also means changing A1. |
-| A5 | The discount is a positive whole number of basis points, at most 200 (2.00 percentage points). The limit is a single setting. | Rejects obviously wrong input. The number itself is a placeholder. | A different limit is a setting change. Fractional basis points or a zero discount would change validation and the data model. |
+| A5 | The discount is a positive whole number of basis points, at most 200 (2.00 percentage points). The limit is one constant in the code. | Rejects obviously wrong input. The number itself is a placeholder. | A different limit is a one-line change. Fractional basis points or a zero discount would change validation and the data model. |
 | A6 | Mortgage applications and users are seed data. This service reads them and does not manage them. | The assignment lets us represent them as we find useful. | Integrate with the systems that own them. |
 | A7 | The caller is identified by an `X-User-Id` header. This is not authentication. | Lets reviewers exercise roles locally without an identity provider. | See section D. |
 | A8 | Who decided and when are set by the server, in UTC. They are never taken from the request body. | An audit record must not be writable by the caller. | No alternative considered. |
-| A9 | A decline must carry a comment; a comment on an approval is optional. | The relationship manager needs to know what to change before resubmitting (A4). | Make the comment optional. |
+| A9 | Every decision carries a comment. | A decline tells the relationship manager what to change before resubmitting (A4); an approval records why the exception is justified. | Make the comment optional on approval. |
 
 ## D. Deliberately out of scope
 
