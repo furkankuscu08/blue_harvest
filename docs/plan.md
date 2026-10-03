@@ -135,6 +135,29 @@ Concurrency tests use separate connections and a coordinated start, and assert o
 - Never cut: run and test instructions, assumptions, time spent, both bonuses with meaningful verification evidence, isolation of agent-written tests.
 - Log time spent per day below.
 
+## Changes after day 3
+
+Decided on 2026-10-03 after a scope review, with a second agent as an extra opinion. They replace the matching parts above.
+
+- **Build the API in vertical slices.** Day 4 delivers one working path: create with idempotency (they share one transaction, so they are built together), approve, and the downstream read. Day 5 completes the lifecycle. The demo story is an end-to-end API test from day 4 on, not a script written on day 9.
+- **Agent bonus.** The second experiment is idempotent replay, at API level, run with a neutral prompt. The first run stays as recorded. The authorisation mutant and the `.claude/agents/` subagent are dropped: the mutant repeats the first experiment's shape, and a subagent would let the session that writes the code also guard it. The harness gets no new features.
+- **Documents.** No ADRs. The revision decision is explained in `assumptions-and-scope.md`, section B. The README is short and links to the existing documents; it keeps a small traceability table.
+- **Review depth follows risk.** Transactions, idempotency, concurrency and the harness get a full review; UI layout and simple lists get a short one.
+
+| Day | Hours | Outcome |
+|---|---|---|
+| 4 | 3 | Error body, caller identity, seed and reset, create with idempotency, get, decide, approved discount; first end-to-end test |
+| 5 | 3 | Revise, the full decline-revise-approve story, stale version, concurrency test at API level, list endpoints |
+| 6 | 3 | UI, including the two-tab stale-version demo |
+| 7 | 3 | Neutral prompt, idempotent replay mutant and recorded run |
+| 8 | 2 | Hardening: error paths, seed and reset, clean `docker compose up`, fixes found while using the UI |
+| 9 | 3 | README, trim `api-contract.md`, run the demo script and record the result |
+| 10 | 2 | Fresh-clone rehearsal, walkthrough rehearsal, buffer |
+
+Remaining estimate: 19 hours. Projected total, including planning and the 14 hours spent up to the end of day 3: about 33 hours.
+
+If time runs short, cut first: optional extra runs, then UI presentation detail. The idempotent replay experiment is not cut.
+
 ## Time log
 
 | Date | Hours | What |
@@ -142,3 +165,4 @@ Concurrency tests use separate connections and a coordinated start, and assert o
 | 2026-10-02 to 03 | 4 | Planning and three review rounds |
 | 2026-10-03 | 4 | Day 1: assumptions and scope, state model, API contract, review rounds |
 | 2026-10-03 | 3 | Day 2: process scaffolding, project skeleton, Docker, CI, SQLite concurrency proof |
+| 2026-10-03 | 3 | Day 3: domain core (test-first), invariant guard spike with an LLM-free harness and the first recorded run |
