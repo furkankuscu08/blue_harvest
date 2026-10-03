@@ -3,12 +3,12 @@
 from datetime import UTC, datetime
 
 import pytest
-from app.seed import reset, seed_if_empty
 from sqlalchemy import func, select
 
 from app.db import create_db_engine, read_session_factory, write_session_factory
 from app.domain import Actor, create_request
 from app.models import Application, Base, ExceptionRequest, Role, User
+from app.seed import reset, seed_if_empty
 
 EXPECTED_REQUESTS = {
     "APP-1001": None,
