@@ -166,3 +166,4 @@ If time runs short, cut first: optional extra runs, then UI presentation detail.
 | 2026-10-03 | 4 | Day 1: assumptions and scope, state model, API contract, review rounds |
 | 2026-10-03 | 3 | Day 2: process scaffolding, project skeleton, Docker, CI, SQLite concurrency proof |
 | 2026-10-03 | 3 | Day 3: domain core (test-first), invariant guard spike with an LLM-free harness and the first recorded run |
+| 2026-10-04 | 3 | Day 4: first API slice (identity, errors, seed and reset, create with idempotency, decide, approved discount, first end-to-end test), two test review rounds, AI usage log restructured |
