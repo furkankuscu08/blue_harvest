@@ -13,6 +13,8 @@ from app.domain import MAX_DISCOUNT_BPS
 from app.models import Outcome, Status
 
 Text = Annotated[str, Field(min_length=1, max_length=1000)]
+DiscountBps = Annotated[StrictInt, Field(ge=1, le=MAX_DISCOUNT_BPS)]
+Version = Annotated[StrictInt, Field(ge=1)]
 
 
 class Input(BaseModel):
@@ -21,12 +23,18 @@ class Input(BaseModel):
 
 class CreateRequestInput(Input):
     application_id: str
-    discount_bps: Annotated[StrictInt, Field(ge=1, le=MAX_DISCOUNT_BPS)]
+    discount_bps: DiscountBps
+    reason: Text
+
+
+class RevisionInput(Input):
+    expected_version: Version
+    discount_bps: DiscountBps
     reason: Text
 
 
 class DecisionInput(Input):
-    expected_version: Annotated[StrictInt, Field(ge=1)]
+    expected_version: Version
     outcome: Outcome
     comment: Text
 

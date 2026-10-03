@@ -49,6 +49,10 @@ def decide(client: TestClient, request_id: str, *, user: str = "carol", **body) 
     return client.post(f"/requests/{request_id}/decisions", headers=as_user(user), json=body)
 
 
+def revise(client: TestClient, request_id: str, *, user: str = "alice", **body) -> Response:
+    return client.post(f"/requests/{request_id}/revisions", headers=as_user(user), json=body)
+
+
 def read_discount(
     client: TestClient, application_id: str, *, user: str = "mortgage-process"
 ) -> Response:

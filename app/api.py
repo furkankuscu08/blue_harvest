@@ -21,7 +21,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db import get_read_session, get_write_session
-from app.domain import Actor, create_request, decide, require_role
+from app.domain import Actor, create_request, decide, require_role, revise
 from app.errors import ApiError
 from app.models import (
     Application,
@@ -37,6 +37,7 @@ from app.schemas import (
     CreateRequestInput,
     DecisionInput,
     RequestDetail,
+    RevisionInput,
 )
 
 MAX_IDEMPOTENCY_KEY_LENGTH = 255
@@ -76,6 +77,13 @@ def _load_request(session: Session, request_id: uuid.UUID) -> ExceptionRequest:
 def _require_application(session: Session, application_id: str) -> None:
     if session.get(Application, application_id) is None:
         raise ApiError(404, "APPLICATION_NOT_FOUND", "No application with this id.")
+
+
+def _respond_after_commit(session: Session, request: ExceptionRequest) -> JSONResponse:
+    """Build the detail inside the transaction, then commit, then return it."""
+    response_body = RequestDetail.model_validate(request).model_dump(mode="json")
+    session.commit()
+    return JSONResponse(status_code=201, content=response_body)
 
 
 @router.get("/health")
@@ -154,6 +162,23 @@ def get_exception_request(
     return RequestDetail.model_validate(_load_request(session, request_id))
 
 
+@router.post("/requests/{request_id}/revisions", status_code=201, response_model=RequestDetail)
+def revise_request(
+    request_id: uuid.UUID, body: RevisionInput, session: WriteSession, caller: WriteActor
+) -> JSONResponse:
+    require_role(caller, Role.RELATIONSHIP_MANAGER)
+    request = _load_request(session, request_id)
+    revise(
+        request,
+        caller,
+        expected_version=body.expected_version,
+        discount_bps=body.discount_bps,
+        reason=body.reason,
+        now=datetime.now(UTC),
+    )
+    return _respond_after_commit(session, request)
+
+
 @router.post("/requests/{request_id}/decisions", status_code=201, response_model=RequestDetail)
 def decide_on_request(
     request_id: uuid.UUID, body: DecisionInput, session: WriteSession, caller: WriteActor
@@ -168,9 +193,7 @@ def decide_on_request(
         comment=body.comment,
         now=datetime.now(UTC),
     )
-    response_body = RequestDetail.model_validate(request).model_dump(mode="json")
-    session.commit()
-    return JSONResponse(status_code=201, content=response_body)
+    return _respond_after_commit(session, request)
 
 
 @router.get("/applications")

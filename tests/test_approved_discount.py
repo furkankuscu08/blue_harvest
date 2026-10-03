@@ -6,9 +6,9 @@ from tests.helpers import get, read_discount, request_id_for
 
 
 def test_mortgage_process_reads_the_approved_discount(client):
-    # Seed: APP-1004 is APPROVED. The values come from its approved revision.
+    # Seed: APP-1004 was declined at 35 bps, revised to 20 bps and approved by carol.
     request_id = request_id_for(client, "APP-1004")
-    approved = get(client, request_id).json()["revisions"][-1]
+    first, approved = get(client, request_id).json()["revisions"]
 
     response = read_discount(client, "APP-1004")
 
@@ -16,11 +16,13 @@ def test_mortgage_process_reads_the_approved_discount(client):
     assert response.json() == {
         "application_id": "APP-1004",
         "request_id": request_id,
-        "revision_number": approved["number"],
-        "approved_discount_bps": approved["discount_bps"],
-        "decided_by": approved["decision"]["decided_by"],
+        "revision_number": 2,
+        "approved_discount_bps": 20,
+        "decided_by": "carol",
         "decided_at": approved["decision"]["decided_at"],
     }
+    # Both decisions are carol's, so only the time tells them apart.
+    assert first["decision"]["decided_at"] != approved["decision"]["decided_at"]
 
 
 @pytest.mark.parametrize("application_id", ["APP-1001", "APP-1002", "APP-1003"])
