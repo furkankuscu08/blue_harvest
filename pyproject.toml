@@ -3,6 +3,8 @@
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Recorded agent output is evidence and stays exactly as the agent wrote it.
+extend-exclude = ["guard/runs"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]

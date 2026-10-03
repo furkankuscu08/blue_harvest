@@ -43,6 +43,11 @@ def main() -> int:
     if run_dir.exists():
         print(f"{run_dir} already exists.")
         return 1
+    if ".claude" in workspace.parts:
+        # --restricted treats files under .claude as tool configuration and denies the
+        # agent's writes there, even under tests/. Found in a preflight run.
+        print("The workspace must not be inside a .claude directory.")
+        return 1
     run_dir.mkdir(parents=True)
     prompt = (GUARD / "prompt.md").read_text()
     shutil.copy(GUARD / "prompt.md", run_dir / "prompt.md")
