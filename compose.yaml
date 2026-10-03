@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - pricing-data:/app/data
+
+volumes:
+  pricing-data:
