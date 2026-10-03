@@ -92,6 +92,11 @@ def assert_rejected_without_change(request: ExceptionRequest, expected_code: Err
     assert snapshot(request) == before
 
 
+# Used where the request is at version 2: any other expected version is a mismatch,
+# whether older (the caller saw an earlier state) or newer.
+VERSION_MISMATCH = pytest.mark.parametrize("expected_version", [1, 3], ids=["older", "newer"])
+
+
 # Create
 
 
@@ -188,14 +193,17 @@ def test_reviewer_cannot_revise():
     )
 
 
-def test_stale_version_cannot_revise():
+@VERSION_MISMATCH
+def test_stale_version_cannot_revise(expected_version):
     request = pending_request()
     revise(request, ALICE, expected_version=1, discount_bps=25, reason="Lower ask.", now=T1)
 
     assert_rejected_without_change(
         request,
         ErrorCode.STALE_VERSION,
-        lambda: revise(request, ALICE, expected_version=1, discount_bps=20, reason="x", now=T2),
+        lambda: revise(
+            request, ALICE, expected_version=expected_version, discount_bps=20, reason="x", now=T2
+        ),
     )
 
 
@@ -282,8 +290,9 @@ def test_manager_cannot_decide(outcome):
     )
 
 
-def test_stale_version_cannot_approve():
-    # The reviewer looked at revision 1; the manager has since changed the discount.
+@VERSION_MISMATCH
+def test_stale_version_cannot_approve(expected_version):
+    # The manager changed the discount after version 1. Only version 2 may be approved.
     request = pending_request()
     revise(request, ALICE, expected_version=1, discount_bps=50, reason="Higher ask.", now=T1)
 
@@ -291,12 +300,18 @@ def test_stale_version_cannot_approve():
         request,
         ErrorCode.STALE_VERSION,
         lambda: decide(
-            request, CAROL, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T2
+            request,
+            CAROL,
+            expected_version=expected_version,
+            outcome=Outcome.APPROVED,
+            comment=None,
+            now=T2,
         ),
     )
 
 
-def test_stale_version_cannot_decline():
+@VERSION_MISMATCH
+def test_stale_version_cannot_decline(expected_version):
     request = pending_request()
     revise(request, ALICE, expected_version=1, discount_bps=50, reason="Higher ask.", now=T1)
 
@@ -304,7 +319,12 @@ def test_stale_version_cannot_decline():
         request,
         ErrorCode.STALE_VERSION,
         lambda: decide(
-            request, CAROL, expected_version=1, outcome=Outcome.DECLINED, comment="No.", now=T2
+            request,
+            CAROL,
+            expected_version=expected_version,
+            outcome=Outcome.DECLINED,
+            comment="No.",
+            now=T2,
         ),
     )
 
