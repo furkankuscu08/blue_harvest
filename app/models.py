@@ -3,10 +3,10 @@
 These classes only hold state. The rules that change them live in app.domain.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, String, Text, TypeDecorator, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -29,8 +29,29 @@ class Outcome(StrEnum):
     DECLINED = "DECLINED"
 
 
+class UTCDateTime(TypeDecorator):
+    """A timestamp stored as UTC and read back as UTC.
+
+    SQLite keeps no time zone, so without this a value read from the database
+    would be naive while a value just created is aware.
+    """
+
+    impl = DateTime
+    cache_ok = True
+
+    def process_bind_param(self, value: datetime | None, dialect) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            raise ValueError("Timestamps must carry a time zone.")
+        return value.astimezone(UTC).replace(tzinfo=None)
+
+    def process_result_value(self, value: datetime | None, dialect) -> datetime | None:
+        return value and value.replace(tzinfo=UTC)
+
+
 class Base(DeclarativeBase):
-    pass
+    type_annotation_map = {datetime: UTCDateTime}
 
 
 class Application(Base):

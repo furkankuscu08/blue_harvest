@@ -45,6 +45,8 @@ ruff check . && ruff format --check .                       # lint
 pip-audit -r requirements-dev.txt --no-deps --disable-pip   # dependency audit
 uvicorn app.main:create_app --factory --reload              # run locally on :8000
 docker compose up --build                                   # run in Docker
+python -m app.seed --reset                                  # empty the database, seed again
+docker compose exec app python -m app.seed --reset          # the same, in Docker
 ```
 
 After editing `requirements.in` or `requirements-dev.in`, regenerate the pinned files:
