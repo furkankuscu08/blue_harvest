@@ -16,6 +16,9 @@ from enum import StrEnum
 
 from app.models import Decision, ExceptionRequest, Outcome, Revision, Role, Status
 
+# Assumption A5: the largest discount a request may ask for, in basis points.
+MAX_DISCOUNT_BPS = 200
+
 
 class ErrorCode(StrEnum):
     ROLE_NOT_ALLOWED = "ROLE_NOT_ALLOWED"
@@ -40,7 +43,7 @@ class Actor:
 def create_request(
     actor: Actor, *, application_id: str, discount_bps: int, reason: str, now: datetime
 ) -> ExceptionRequest:
-    _require_role(actor, Role.RELATIONSHIP_MANAGER)
+    require_role(actor, Role.RELATIONSHIP_MANAGER)
 
     request = ExceptionRequest(
         id=str(uuid.uuid4()),
@@ -66,7 +69,7 @@ def revise(
     reason: str,
     now: datetime,
 ) -> None:
-    _require_role(actor, Role.RELATIONSHIP_MANAGER)
+    require_role(actor, Role.RELATIONSHIP_MANAGER)
     if actor.id != request.created_by:
         raise DomainError(ErrorCode.NOT_REQUEST_OWNER)
     _require_version(request, expected_version)
@@ -88,10 +91,10 @@ def decide(
     *,
     expected_version: int,
     outcome: Outcome,
-    comment: str | None,
+    comment: str,
     now: datetime,
 ) -> None:
-    _require_role(actor, Role.REVIEWER)
+    require_role(actor, Role.REVIEWER)
     if actor.id == request.created_by:
         raise DomainError(ErrorCode.FOUR_EYES_VIOLATION)
     _require_version(request, expected_version)
@@ -107,7 +110,7 @@ def decide(
     request.updated_at = now
 
 
-def _require_role(actor: Actor, role: Role) -> None:
+def require_role(actor: Actor, role: Role) -> None:
     if role not in actor.roles:
         raise DomainError(ErrorCode.ROLE_NOT_ALLOWED)
 

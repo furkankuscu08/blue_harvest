@@ -110,7 +110,14 @@ def _seed(session: Session) -> None:
         reason="Matches the competing offer.",
         now=at(6),
     )
-    decide(approved, carol, expected_version=3, outcome=Outcome.APPROVED, comment=None, now=at(7))
+    decide(
+        approved,
+        carol,
+        expected_version=3,
+        outcome=Outcome.APPROVED,
+        comment="Matches a documented competing offer.",
+        now=at(7),
+    )
 
     # APP-1005: pending, created by dave, who also holds the reviewer role.
     held_by_dave = create_request(
