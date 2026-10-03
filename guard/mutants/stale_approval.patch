@@ -1,0 +1,14 @@
+diff --git a/app/domain.py b/app/domain.py
+index 23f51e8..6cac7bc 100644
+--- a/app/domain.py
++++ b/app/domain.py
+@@ -94,7 +94,8 @@ def decide(
+     _require_role(actor, Role.REVIEWER)
+     if actor.id == request.created_by:
+         raise DomainError(ErrorCode.FOUR_EYES_VIOLATION)
+-    _require_version(request, expected_version)
++    if outcome != Outcome.APPROVED:
++        _require_version(request, expected_version)
+     if request.status != Status.PENDING:
+         raise DomainError(ErrorCode.INVALID_STATE)
+ 

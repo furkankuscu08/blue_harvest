@@ -1,0 +1,13 @@
+{
+  "mutant": "stale_approval",
+  "baseline": "229ad61ba927f694d599d81b75f07b9aa3fff492",
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.288 (Claude Code)",
+  "started_at": "2026-10-03T17:24:53+00:00",
+  "exit_code": 0,
+  "command": "claude -p \"<contents of prompt.md>\" --restricted --safe-mode --tools Read,Glob,Grep,Write,Edit --allowedTools Read Glob Grep Edit(tests/**) --permission-mode dontAsk --model claude-sonnet-5-5 --output-format json --no-session-persistence",
+  "added_files": [
+    "tests/test_guard.py"
+  ],
+  "rule_violations": []
+}
