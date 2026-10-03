@@ -141,3 +141,4 @@ Concurrency tests use separate connections and a coordinated start, and assert o
 |---|---|---|
 | 2026-10-02 to 03 | 4 | Planning and three review rounds |
 | 2026-10-03 | 4 | Day 1: assumptions and scope, state model, API contract, review rounds |
+| 2026-10-03 | 3 | Day 2: process scaffolding, project skeleton, Docker, CI, SQLite concurrency proof |
