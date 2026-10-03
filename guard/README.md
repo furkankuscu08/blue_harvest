@@ -19,11 +19,11 @@ python guard/harness.py replay stale_approval guard/runs/2026-10-03-stale-approv
 | `prompt.md` | The agent's instructions |
 | `harness.py` | LLM-free: prove, prepare, verify, calibrate, replay |
 | `generate.py` | Runs the agent with restricted permissions and records the run |
-| `calibration/` | Three tests with known results: caught, missed, invalid run |
+| `calibration/` | Five tests with known results: caught, missed, and three kinds of invalid run |
 | `runs/` | Recorded runs: prompt, command, transcript, the agent's tests, result |
 
 The workspace must be outside any `.claude` directory: the agent is not allowed to write there.
 
 What `caught` means: the agent's test passes on the baseline and fails on the mutant with an assertion. The harness checks only that it is an assertion. Whether the assertion is about the rule the mutant breaks is confirmed by a person and recorded in the run's `result.md`.
 
-A run is an `invalid run` when the agent changed any existing file, when its file runs tests defined elsewhere (for example by importing them), when pytest does not end normally, or when it times out. `calibration/` holds one example of each kind; run `calibrate` after changing the harness.
+A run is an `invalid run` when the agent changed any existing file, when its file runs tests defined elsewhere (for example by importing them), when pytest does not end normally, or when it times out. `calibration/` covers the import, interrupted-run and collection-error cases; run `calibrate` after changing the harness.
