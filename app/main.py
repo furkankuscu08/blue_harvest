@@ -9,16 +9,21 @@ from fastapi import APIRouter, Depends, FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from app.config import Settings
-from app.db import create_db_engine, get_session
+from app.db import (
+    create_db_engine,
+    get_read_session,
+    read_session_factory,
+    write_session_factory,
+)
 
 router = APIRouter()
 
 
 @router.get("/health")
-def health(session: Annotated[Session, Depends(get_session)]):
+def health(session: Annotated[Session, Depends(get_read_session)]):
     try:
         session.execute(text("SELECT 1"))
     except SQLAlchemyError:
@@ -35,6 +40,8 @@ def health(session: Annotated[Session, Depends(get_session)]):
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     app = FastAPI(title="Pricing exception requests")
-    app.state.session_factory = sessionmaker(create_db_engine(settings.database_path))
+    engine = create_db_engine(settings.database_path)
+    app.state.read_sessions = read_session_factory(engine)
+    app.state.write_sessions = write_session_factory(engine)
     app.include_router(router)
     return app

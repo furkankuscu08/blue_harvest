@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.db import get_session
+from app.db import get_read_session
 
 
 def test_health_returns_ok_when_database_is_reachable(client):
@@ -19,7 +19,7 @@ def test_health_returns_503_when_database_is_unavailable(client, tmp_path):
         with Session(broken_engine) as session:
             yield session
 
-    client.app.dependency_overrides[get_session] = broken_session
+    client.app.dependency_overrides[get_read_session] = broken_session
 
     response = client.get("/health")
 
