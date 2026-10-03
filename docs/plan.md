@@ -154,6 +154,8 @@ Decided on 2026-10-03 after a scope review, with a second agent as an extra opin
 | 9 | 3 | README, trim `api-contract.md`, run the demo script and record the result |
 | 10 | 2 | Fresh-clone rehearsal, walkthrough rehearsal, buffer |
 
+Remaining estimate: 19 hours. Projected total, including planning and the 14 hours spent up to the end of day 3: about 33 hours.
+
 If time runs short, cut first: optional extra runs, then UI presentation detail. The idempotent replay experiment is not cut.
 
 ## Time log
