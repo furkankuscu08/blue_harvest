@@ -37,6 +37,7 @@ Pull requests describe the change only. This log records what the agents did, wh
 - A test restructure lost two cases, a version newer than the current one. The builder's own mutants missed it; the PR review caught it. [#9]
 - Seeding checked only the users table, so a database with other rows was seeded again. Fixed with a regression test. [#12]
 - A body that is not valid UTF-8 got the framework's plain 400 instead of the contract's error body. Fixed with a test. [#13]
+- Two gaps had been open since [#13]: no test checked that a write endpoint builds its response before the commit, or that it validates the body before looking up the request. The test review for revise found both; the new tests cover revise and decide. [#16]
 
 ### Suggestions are weighed, not followed
 
@@ -44,6 +45,7 @@ Pull requests describe the change only. This log records what the agents did, wh
 - Trimming whitespace from `outcome`: rejected, because it is a code, not text. The contract now names the trimmed fields, and a test pins the rule. [#13]
 - A test that replays after an app restart: rejected. Idempotency records live in a table, so an in-memory cache is not a plausible wrong implementation. [#13]
 - A test for a configurable discount limit: the setting was removed instead, because nobody needs it. The limit is now a constant (A5). [#13]
+- A controllable clock, so that a story test would not rely on two decisions getting different timestamps: rejected as too much for one assertion. The assertion was dropped; who decided already tells the two decisions apart. [#16]
 
 ### The builder is wrong too
 
@@ -52,11 +54,14 @@ Pull requests describe the change only. This log records what the agents did, wh
 - The edit hook removed imports added one edit before the code that used them. Unused imports are now reported, not removed. [#12]
 - The builder said a wrongly sorted import "would fix itself". It did not, and the local ruff cache hid it. CI caught it. [#12]
 - This log needed review too: its first version had three overstated claims. [#5]
+- The check that two requests in the concurrency test really overlap went wrong twice. The first version failed on correct code: SQLAlchemy ignored `insert=True` for that event, so the check ran after the lock wait. A trace showed it. The second version could still fail when one request started late; a reviewer showed it with a 600 ms delay. Both write transactions now wait for each other just before `BEGIN`. [#16]
+- The builder's mutant script restored files with `git checkout`, which also erased the uncommitted implementation, so nine of ten mutants ran against the old code. Their output made no sense, which exposed it. They were rerun from a backup. [#16]
 
 ### A claim counts only with a check that fails without it
 
 - `BEGIN IMMEDIATE`: on the driver defaults, two concurrent read-modify-write increments ended at 1 instead of 2 in 10 of 10 runs. After the change: 2, in 50 of 50 runs. [#7]
 - Two different mutants failed exactly the same tests. The builder distrusted the match: Python had reused cached bytecode from the previous mutant. Each run now gets its own cache. [#9]
+- The same race between a revision and an approval, under three transaction setups. With the driver's defaults both succeeded: the request showed `APPROVED` while its latest revision, at 35 bps, had no decision, so the mortgage process would have read a discount nobody approved. With `BEGIN DEFERRED` the data stayed correct but the losing caller got a 500. With `BEGIN IMMEDIATE` it gets `409 STALE_VERSION`. The API concurrency test fails under the first two. [#16]
 - Invariant guard, first run: Claude Sonnet 5.5 wrote tests that caught the stale-approval mutant in 4 of 4 cases, checked by an LLM-free harness and confirmed by me. In review, a second agent showed that the harness itself could report false catches; those cases are now part of its calibration. Limits are recorded with the [run](../guard/runs/2026-10-03-stale-approval/result.md). [#10]
 
 ### I decide rules and scope
@@ -64,6 +69,7 @@ Pull requests describe the change only. This log records what the agents did, wh
 - When documents kept growing over review rounds, I asked whether the plan was overengineered. Three planned documents were cut on day 1. After day 3, the ADRs, a guard subagent and the authorisation mutant were dropped. [#11]
 - I made a comment mandatory for approvals as well as declines, and proposed a minimum of 20 characters. The builder argued against the minimum: it does not ensure quality, and 20 is arbitrary. I dropped it. [#13]
 - Before merging the first API slice I ran a smoke script against the service in Docker: create, replay, stale retry, the downstream read and four-eyes. 10 of 10 checks passed. [#13]
+- Before merging revise I ran the extended smoke script: a reset inside Docker, then 35 bps declined, revised to 20, a stale retry, a revise by another manager, the approval, and the downstream read of revision 2 at 20 bps. 20 of 20 checks passed. [#16]
 
 ## What I learned so far
 
@@ -80,3 +86,4 @@ Pull requests describe the change only. This log records what the agents did, wh
 [#11]: https://github.com/furkankuscu08/blue_harvest/pull/11
 [#12]: https://github.com/furkankuscu08/blue_harvest/pull/12
 [#13]: https://github.com/furkankuscu08/blue_harvest/pull/13
+[#16]: https://github.com/furkankuscu08/blue_harvest/pull/16
