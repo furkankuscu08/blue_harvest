@@ -1,6 +1,6 @@
 # AI usage
 
-How AI agents contributed to this work, and how their output was checked. Updated as the work happens. Every example links to the pull request or file where it can be checked. For the planning phase the link shows the outcome; the discussion itself happened in agent conversations.
+How AI agents contributed to this work, and how their output was checked. Updated as the work happens. Every example links to the pull request or file where it can be checked. For the planning phase the link shows the outcome; the discussion itself happened in agent conversations. Checks run in one-off scripts outside the repository say so; their outcome is recorded here, not in the linked PR.
 
 ## Roles
 
@@ -55,13 +55,13 @@ Pull requests describe the change only. This log records what the agents did, wh
 - The builder said a wrongly sorted import "would fix itself". It did not, and the local ruff cache hid it. CI caught it. [#12]
 - This log needed review too: its first version had three overstated claims. [#5]
 - The check that two requests in the concurrency test really overlap went wrong twice. The first version failed on correct code: SQLAlchemy ignored `insert=True` for that event, so the check ran after the lock wait. A trace showed it. The second version could still fail when one request started late; a reviewer showed it with a 600 ms delay. Both write transactions now wait for each other just before `BEGIN`. [#16]
-- The builder's mutant script restored files with `git checkout`, which also erased the uncommitted implementation, so nine of ten mutants ran against the old code. Their output made no sense, which exposed it. They were rerun from a backup. [#16]
+- The builder's mutant script restored files with `git checkout`, which also erased the uncommitted implementation, so nine of ten mutants ran against the old code. Their output made no sense, which exposed it. They were rerun from a backup. After the rerun, nine of ten mutants failed a test. The tenth loads the caller in a separate read session: it breaks the `AGENTS.md` rule but has no observable effect, because no endpoint changes users. The mutant runs were one-off scripts outside the repository. [#16]
 
 ### A claim counts only with a check that fails without it
 
 - `BEGIN IMMEDIATE`: on the driver defaults, two concurrent read-modify-write increments ended at 1 instead of 2 in 10 of 10 runs. After the change: 2, in 50 of 50 runs. [#7]
 - Two different mutants failed exactly the same tests. The builder distrusted the match: Python had reused cached bytecode from the previous mutant. Each run now gets its own cache. [#9]
-- The same race between a revision and an approval, under three transaction setups. With the driver's defaults both succeeded: the request showed `APPROVED` while its latest revision, at 35 bps, had no decision, so the mortgage process would have read a discount nobody approved. With `BEGIN DEFERRED` the data stayed correct but the losing caller got a 500. With `BEGIN IMMEDIATE` it gets `409 STALE_VERSION`. The API concurrency test fails under the first two. [#16]
+- In a one-off script outside the repository, the same race between a revision and an approval under three transaction setups. With the driver's defaults both succeeded: the request was stored as `APPROVED` while its latest revision, at 35 bps, had no decision, and the approval sat on the earlier revision. The downstream read then failed with a 500. The builder first claimed the mortgage process would read the unapproved discount; a reviewer checked the code path and corrected it. With `BEGIN DEFERRED` the data stayed correct but the losing caller got a 500. With `BEGIN IMMEDIATE` it gets `409 STALE_VERSION`. The API concurrency test fails under the first two. [#16]
 - Invariant guard, first run: Claude Sonnet 5.5 wrote tests that caught the stale-approval mutant in 4 of 4 cases, checked by an LLM-free harness and confirmed by me. In review, a second agent showed that the harness itself could report false catches; those cases are now part of its calibration. Limits are recorded with the [run](../guard/runs/2026-10-03-stale-approval/result.md). [#10]
 
 ### I decide rules and scope
