@@ -29,7 +29,7 @@ def pending_request(by: Actor = ALICE) -> ExceptionRequest:
 
 
 def declined_request() -> ExceptionRequest:
-    """Version 2: revision 1 declined by carol."""
+    """Version 2: alice's revision 1 declined by carol."""
     request = pending_request()
     decide(
         request, CAROL, expected_version=1, outcome=Outcome.DECLINED, comment="Too high.", now=T1
@@ -37,11 +37,34 @@ def declined_request() -> ExceptionRequest:
     return request
 
 
-def approved_request() -> ExceptionRequest:
+def approved_request(by: Actor = ALICE) -> ExceptionRequest:
     """Version 2: revision 1 approved by carol."""
-    request = pending_request()
+    request = pending_request(by=by)
     decide(request, CAROL, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T1)
     return request
+
+
+def revision_contents(request: ExceptionRequest) -> list[tuple]:
+    """What a revision says. It never changes once written (I2)."""
+    return [(r.number, r.discount_bps, r.reason, r.created_at) for r in request.revisions]
+
+
+def snapshot(request: ExceptionRequest) -> tuple:
+    """Everything a rejected call must leave unchanged (I4)."""
+    return (
+        request.id,
+        request.application_id,
+        request.created_by,
+        request.created_at,
+        request.status,
+        request.version,
+        request.updated_at,
+        revision_contents(request),
+        [
+            (d.outcome, d.decided_by, d.decided_at, d.comment) if (d := r.decision) else None
+            for r in request.revisions
+        ],
+    )
 
 
 def assert_consistent(request: ExceptionRequest) -> None:
@@ -54,24 +77,19 @@ def assert_consistent(request: ExceptionRequest) -> None:
     assert [r.number for r in request.revisions] == list(range(1, len(request.revisions) + 1))
 
 
-def snapshot(request: ExceptionRequest) -> tuple:
-    """Everything a rejected call must leave unchanged (I4)."""
-    return (
-        request.status,
-        request.version,
-        request.updated_at,
-        [(r.number, r.discount_bps, r.reason, r.created_at) for r in request.revisions],
-        [
-            (d.outcome, d.decided_by, d.decided_at, d.comment) if (d := r.decision) else None
-            for r in request.revisions
-        ],
-    )
-
-
 def assert_rejected(expected_code: ErrorCode, action) -> None:
     with pytest.raises(DomainError) as error:
         action()
     assert error.value.code == expected_code
+
+
+def assert_rejected_without_change(request: ExceptionRequest, expected_code: ErrorCode, action):
+    """The call fails with the expected code and changes nothing (I4)."""
+    before = snapshot(request)
+
+    assert_rejected(expected_code, action)
+
+    assert snapshot(request) == before
 
 
 # Create
@@ -88,14 +106,8 @@ def test_manager_creates_pending_request_with_first_revision():
     assert request.version == 1
     assert request.created_by == "alice"
     assert request.created_at == request.updated_at == T0
-    [revision] = request.revisions
-    assert (revision.number, revision.discount_bps, revision.reason, revision.created_at) == (
-        1,
-        35,
-        "Competing offer.",
-        T0,
-    )
-    assert revision.decision is None
+    assert revision_contents(request) == [(1, 35, "Competing offer.", T0)]
+    assert request.revisions[0].decision is None
     assert_consistent(request)
 
 
@@ -109,31 +121,28 @@ def test_only_manager_can_create(actor):
 
 def test_creator_revises_pending_request():
     request = pending_request()
+    before = revision_contents(request)
 
     revise(request, ALICE, expected_version=1, discount_bps=25, reason="Lower ask.", now=T1)
 
+    assert revision_contents(request) == before + [(2, 25, "Lower ask.", T1)]
+    assert request.revisions[-1].decision is None
     assert request.status == Status.PENDING
     assert request.version == 2
     assert request.updated_at == T1
-    latest = request.revisions[-1]
-    assert (latest.number, latest.discount_bps, latest.reason, latest.created_at) == (
-        2,
-        25,
-        "Lower ask.",
-        T1,
-    )
-    assert latest.decision is None
     assert_consistent(request)
 
 
 def test_creator_resubmits_declined_request():
     request = declined_request()
+    before = revision_contents(request)
 
     revise(request, ALICE, expected_version=2, discount_bps=20, reason="Matches offer.", now=T2)
 
+    assert revision_contents(request) == before + [(2, 20, "Matches offer.", T2)]
     assert request.status == Status.PENDING
     assert request.version == 3
-    assert request.revisions[-1].number == 2
+    assert request.updated_at == T2
     assert_consistent(request)
 
 
@@ -162,7 +171,8 @@ def test_earlier_revisions_never_change():
 def test_other_manager_cannot_revise():
     request = pending_request()
 
-    assert_rejected(
+    assert_rejected_without_change(
+        request,
         ErrorCode.NOT_REQUEST_OWNER,
         lambda: revise(request, BOB, expected_version=1, discount_bps=20, reason="x", now=T1),
     )
@@ -171,7 +181,8 @@ def test_other_manager_cannot_revise():
 def test_reviewer_cannot_revise():
     request = pending_request()
 
-    assert_rejected(
+    assert_rejected_without_change(
+        request,
         ErrorCode.ROLE_NOT_ALLOWED,
         lambda: revise(request, CAROL, expected_version=1, discount_bps=20, reason="x", now=T1),
     )
@@ -181,7 +192,8 @@ def test_stale_version_cannot_revise():
     request = pending_request()
     revise(request, ALICE, expected_version=1, discount_bps=25, reason="Lower ask.", now=T1)
 
-    assert_rejected(
+    assert_rejected_without_change(
+        request,
         ErrorCode.STALE_VERSION,
         lambda: revise(request, ALICE, expected_version=1, discount_bps=20, reason="x", now=T2),
     )
@@ -190,7 +202,8 @@ def test_stale_version_cannot_revise():
 def test_approved_request_cannot_be_revised():
     request = approved_request()
 
-    assert_rejected(
+    assert_rejected_without_change(
+        request,
         ErrorCode.INVALID_STATE,
         lambda: revise(request, ALICE, expected_version=2, discount_bps=20, reason="x", now=T2),
     )
@@ -202,9 +215,11 @@ def test_approved_request_cannot_be_revised():
 def test_reviewer_approves_latest_revision():
     request = pending_request()
     revise(request, ALICE, expected_version=1, discount_bps=20, reason="Matches offer.", now=T1)
+    before = revision_contents(request)
 
     decide(request, CAROL, expected_version=2, outcome=Outcome.APPROVED, comment=None, now=T2)
 
+    assert revision_contents(request) == before
     first, second = request.revisions
     assert first.decision is None
     decision = second.decision
@@ -222,41 +237,48 @@ def test_reviewer_approves_latest_revision():
 
 def test_reviewer_declines_latest_revision():
     request = pending_request()
+    revise(request, ALICE, expected_version=1, discount_bps=20, reason="Matches offer.", now=T1)
+    before = revision_contents(request)
 
     decide(
-        request, CAROL, expected_version=1, outcome=Outcome.DECLINED, comment="Too high.", now=T1
+        request, CAROL, expected_version=2, outcome=Outcome.DECLINED, comment="Too high.", now=T2
     )
 
-    decision = request.revisions[-1].decision
-    assert (decision.outcome, decision.decided_by, decision.comment) == (
+    assert revision_contents(request) == before
+    first, second = request.revisions
+    assert first.decision is None
+    decision = second.decision
+    assert (decision.outcome, decision.decided_by, decision.decided_at, decision.comment) == (
         Outcome.DECLINED,
         "carol",
+        T2,
         "Too high.",
     )
     assert request.status == Status.DECLINED
-    assert request.version == 2
+    assert request.version == 3
+    assert request.updated_at == T2
     assert_consistent(request)
 
 
-def test_creator_cannot_decide_own_request_even_as_reviewer():
+@pytest.mark.parametrize("outcome", list(Outcome))
+def test_creator_cannot_decide_own_request_even_as_reviewer(outcome):
     request = pending_request(by=DAVE)
 
-    assert_rejected(
+    assert_rejected_without_change(
+        request,
         ErrorCode.FOUR_EYES_VIOLATION,
-        lambda: decide(
-            request, DAVE, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T1
-        ),
+        lambda: decide(request, DAVE, expected_version=1, outcome=outcome, comment="x", now=T1),
     )
 
 
-def test_manager_cannot_decide():
+@pytest.mark.parametrize("outcome", list(Outcome))
+def test_manager_cannot_decide(outcome):
     request = pending_request()
 
-    assert_rejected(
+    assert_rejected_without_change(
+        request,
         ErrorCode.ROLE_NOT_ALLOWED,
-        lambda: decide(
-            request, BOB, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T1
-        ),
+        lambda: decide(request, BOB, expected_version=1, outcome=outcome, comment="x", now=T1),
     )
 
 
@@ -265,7 +287,8 @@ def test_stale_version_cannot_approve():
     request = pending_request()
     revise(request, ALICE, expected_version=1, discount_bps=50, reason="Higher ask.", now=T1)
 
-    assert_rejected(
+    assert_rejected_without_change(
+        request,
         ErrorCode.STALE_VERSION,
         lambda: decide(
             request, CAROL, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T2
@@ -277,7 +300,8 @@ def test_stale_version_cannot_decline():
     request = pending_request()
     revise(request, ALICE, expected_version=1, discount_bps=50, reason="Higher ask.", now=T1)
 
-    assert_rejected(
+    assert_rejected_without_change(
+        request,
         ErrorCode.STALE_VERSION,
         lambda: decide(
             request, CAROL, expected_version=1, outcome=Outcome.DECLINED, comment="No.", now=T2
@@ -289,7 +313,8 @@ def test_stale_version_cannot_decline():
 def test_declined_request_cannot_be_decided_again(outcome):
     request = declined_request()
 
-    assert_rejected(
+    assert_rejected_without_change(
+        request,
         ErrorCode.INVALID_STATE,
         lambda: decide(request, CAROL, expected_version=2, outcome=outcome, comment="x", now=T2),
     )
@@ -299,13 +324,57 @@ def test_declined_request_cannot_be_decided_again(outcome):
 def test_approved_request_cannot_be_decided_again(outcome):
     request = approved_request()
 
-    assert_rejected(
+    assert_rejected_without_change(
+        request,
         ErrorCode.INVALID_STATE,
         lambda: decide(request, CAROL, expected_version=2, outcome=outcome, comment="x", now=T2),
     )
 
 
-# Order of checks
+# Order of checks: role, then relation to the request, then version, then state.
+# Each scenario is set up so that every later check would fail too.
+
+
+@pytest.mark.parametrize(
+    "action",
+    [
+        # carol is not a manager, not the owner, has a stale version, and the request is approved.
+        lambda r: revise(r, CAROL, expected_version=1, discount_bps=20, reason="x", now=T2),
+        # alice is not a reviewer, is the creator, has a stale version, and the request is approved.
+        lambda r: decide(
+            r, ALICE, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T2
+        ),
+    ],
+    ids=["revise", "decide"],
+)
+def test_role_is_checked_first(action):
+    request = approved_request(by=ALICE)
+
+    assert_rejected_without_change(request, ErrorCode.ROLE_NOT_ALLOWED, lambda: action(request))
+
+
+@pytest.mark.parametrize(
+    ("creator", "action", "expected_code"),
+    [
+        (
+            ALICE,
+            lambda r: revise(r, BOB, expected_version=1, discount_bps=20, reason="x", now=T2),
+            ErrorCode.NOT_REQUEST_OWNER,
+        ),
+        (
+            DAVE,
+            lambda r: decide(
+                r, DAVE, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T2
+            ),
+            ErrorCode.FOUR_EYES_VIOLATION,
+        ),
+    ],
+    ids=["owner", "four-eyes"],
+)
+def test_relation_is_checked_before_version_and_state(creator, action, expected_code):
+    request = approved_request(by=creator)
+
+    assert_rejected_without_change(request, expected_code, lambda: action(request))
 
 
 @pytest.mark.parametrize(
@@ -321,92 +390,7 @@ def test_approved_request_cannot_be_decided_again(outcome):
 def test_stale_version_is_reported_before_invalid_state(action):
     request = approved_request()
 
-    assert_rejected(ErrorCode.STALE_VERSION, lambda: action(request))
-
-
-@pytest.mark.parametrize(
-    ("creator", "action", "expected_code"),
-    [
-        (
-            ALICE,
-            lambda r: revise(r, BOB, expected_version=99, discount_bps=20, reason="x", now=T1),
-            ErrorCode.NOT_REQUEST_OWNER,
-        ),
-        (
-            DAVE,
-            lambda r: decide(
-                r, DAVE, expected_version=99, outcome=Outcome.APPROVED, comment=None, now=T1
-            ),
-            ErrorCode.FOUR_EYES_VIOLATION,
-        ),
-    ],
-    ids=["owner", "four-eyes"],
-)
-def test_relation_is_checked_before_version(creator, action, expected_code):
-    request = pending_request(by=creator)
-
-    assert_rejected(expected_code, lambda: action(request))
-
-
-# A rejected call changes nothing (I4)
-
-
-@pytest.mark.parametrize(
-    ("setup", "action", "expected_code"),
-    [
-        (
-            pending_request,
-            lambda r: revise(r, ALICE, expected_version=2, discount_bps=20, reason="x", now=T2),
-            ErrorCode.STALE_VERSION,
-        ),
-        (
-            pending_request,
-            lambda r: revise(r, BOB, expected_version=1, discount_bps=20, reason="x", now=T2),
-            ErrorCode.NOT_REQUEST_OWNER,
-        ),
-        (
-            approved_request,
-            lambda r: revise(r, ALICE, expected_version=2, discount_bps=20, reason="x", now=T2),
-            ErrorCode.INVALID_STATE,
-        ),
-        (
-            lambda: pending_request(by=DAVE),
-            lambda r: decide(
-                r, DAVE, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T2
-            ),
-            ErrorCode.FOUR_EYES_VIOLATION,
-        ),
-        (
-            pending_request,
-            lambda r: decide(
-                r, CAROL, expected_version=2, outcome=Outcome.APPROVED, comment=None, now=T2
-            ),
-            ErrorCode.STALE_VERSION,
-        ),
-        (
-            declined_request,
-            lambda r: decide(
-                r, CAROL, expected_version=2, outcome=Outcome.APPROVED, comment=None, now=T2
-            ),
-            ErrorCode.INVALID_STATE,
-        ),
-    ],
-    ids=[
-        "stale-revise",
-        "other-manager-revise",
-        "revise-approved",
-        "four-eyes",
-        "stale-approve",
-        "decide-declined",
-    ],
-)
-def test_rejected_operation_changes_nothing(setup, action, expected_code):
-    request = setup()
-    before = snapshot(request)
-
-    assert_rejected(expected_code, lambda: action(request))
-
-    assert snapshot(request) == before
+    assert_rejected_without_change(request, ErrorCode.STALE_VERSION, lambda: action(request))
 
 
 # The worked example in docs/state-model.md
