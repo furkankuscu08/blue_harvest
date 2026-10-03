@@ -3,38 +3,14 @@
 Run with: uvicorn app.main:create_app --factory
 """
 
-from typing import Annotated
+from fastapi import FastAPI
 
-from fastapi import APIRouter, Depends, FastAPI
-from fastapi.responses import JSONResponse
-from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
-
+from app.api import router
 from app.config import Settings
-from app.db import (
-    create_db_engine,
-    get_read_session,
-    read_session_factory,
-    write_session_factory,
-)
-
-router = APIRouter()
-
-
-@router.get("/health")
-def health(session: Annotated[Session, Depends(get_read_session)]):
-    try:
-        session.execute(text("SELECT 1"))
-    except SQLAlchemyError:
-        return JSONResponse(
-            status_code=503,
-            content={
-                "code": "DATABASE_UNAVAILABLE",
-                "message": "The database cannot be reached.",
-            },
-        )
-    return {"status": "ok"}
+from app.db import create_db_engine, read_session_factory, write_session_factory
+from app.errors import install_error_handlers
+from app.models import Base
+from app.seed import seed_if_empty
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -43,5 +19,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     engine = create_db_engine(settings.database_path)
     app.state.read_sessions = read_session_factory(engine)
     app.state.write_sessions = write_session_factory(engine)
+
+    Base.metadata.create_all(engine)
+    with app.state.write_sessions() as session:
+        seed_if_empty(session)
+        session.commit()
+
+    install_error_handlers(app)
     app.include_router(router)
     return app

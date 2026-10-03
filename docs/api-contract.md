@@ -309,6 +309,6 @@ Applications:
 
 Seeding goes through the same create, revise and decide logic as the API (not over HTTP), so seed data cannot break a domain rule and every seeded history is a state that real operations can reach.
 
-Seeding runs only when the database is empty. A documented reset command deletes the database and seeds it again.
+Seeding runs only when the database is empty. A documented reset command empties the database and seeds it again, in one transaction, so it can run while the service is up.
 
 A seed test checks two things: each application ends in the expected status, revision and version; and running the seed a second time adds no rows.
