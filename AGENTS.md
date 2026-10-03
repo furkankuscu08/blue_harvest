@@ -11,7 +11,7 @@ A small service for mortgage pricing exception requests: a relationship manager 
 - `docs/assumptions-and-scope.md`: what the assignment states, what we assumed, what is out of scope.
 - `docs/plan.md`: the frozen working plan. Where it disagrees with the documents above, they win (for example, `NOT_PENDING` is now `INVALID_STATE`).
 
-If code and these documents disagree, stop and ask. Do not silently pick one.
+Implement and fix code against these sources of truth. If the documents conflict with each other, or a fix would require changing the agreed behaviour, stop and ask.
 
 ## Workflow
 
@@ -19,7 +19,7 @@ If code and these documents disagree, stop and ask. Do not silently pick one.
 2. Write the tests first and show them before implementing domain behaviour.
 3. Implement the smallest change that makes them pass.
 4. Run lint and tests.
-5. Open a small pull request using the template. Fill in both sections. "How I verified it" lists only what the human actually did in this change (read, ran, tried, rejected); never invent checks. The human confirms it before merging.
+5. Open a small pull request using the template. Fill in all three sections. "How I verified it" lists only what the human actually did in this change (read, ran, tried, rejected); never invent checks. The human confirms it before merging.
 
 ## Rules
 
