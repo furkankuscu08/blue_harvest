@@ -100,6 +100,16 @@ def test_seeding_again_adds_no_rows(engine):
     assert row_counts(engine) == before
 
 
+def test_seed_changes_nothing_when_any_table_has_rows(engine):
+    with write_session_factory(engine)() as session:
+        session.add(Application(id="APP-9999", customer_name="Added by hand"))
+        session.commit()
+    before = row_counts(engine)
+
+    assert seed(engine) is False
+    assert row_counts(engine) == before
+
+
 def test_reset_restores_the_seed_state(engine):
     seed(engine)
     seeded = row_counts(engine)

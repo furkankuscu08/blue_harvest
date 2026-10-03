@@ -40,8 +40,9 @@ APPLICATIONS = [
 
 def seed_if_empty(session: Session) -> bool:
     """Seed an empty database. Returns False and changes nothing otherwise."""
-    if session.scalar(select(User.id).limit(1)) is not None:
-        return False
+    for table in Base.metadata.sorted_tables:
+        if session.execute(select(table).limit(1)).first() is not None:
+            return False
     _seed(session)
     return True
 
