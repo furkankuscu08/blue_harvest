@@ -18,7 +18,7 @@ These apply to every request body.
 
 - Whole-number fields accept JSON integers only. Strings, booleans and decimals are rejected, not converted.
 - Unknown fields are rejected. A client that sends `decided_by`, for example, gets an error and is not silently ignored.
-- Text fields are trimmed of leading and trailing whitespace before any other rule is applied. The trimmed value is what is stored and what idempotency compares.
+- Text fields (`application_id`, `reason`, `comment`) are trimmed of leading and trailing whitespace before any other rule is applied. The trimmed value is what is stored and what idempotency compares. `outcome` is a code, not text, and must match exactly.
 
 ### Errors
 

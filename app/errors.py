@@ -6,8 +6,10 @@ Every error defined in the contract is answered with {code, message, details}.
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from starlette.exceptions import HTTPException
 
 from app.domain import DomainError, ErrorCode
 
@@ -62,6 +64,17 @@ def install_error_handlers(app: FastAPI) -> None:
             ApiError(422, "VALIDATION_ERROR", "The request is not valid.", {"errors": errors})
         )
 
+    async def handle_http_error(request: Request, error: HTTPException) -> Response:
+        # FastAPI answers a body it cannot decode (for example invalid UTF-8)
+        # with a plain 400. Unknown routes and methods keep the framework's answer.
+        if error.status_code == 400:
+            errors = [{"field": "body", "message": "The body could not be read."}]
+            return error_response(
+                ApiError(422, "VALIDATION_ERROR", "The request is not valid.", {"errors": errors})
+            )
+        return await http_exception_handler(request, error)
+
     app.add_exception_handler(ApiError, handle_api_error)
     app.add_exception_handler(DomainError, handle_domain_error)
     app.add_exception_handler(RequestValidationError, handle_validation_error)
+    app.add_exception_handler(HTTPException, handle_http_error)

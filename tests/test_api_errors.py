@@ -49,12 +49,17 @@ def test_validation_error_lists_the_fields_without_echoing_input(client):
     assert "secret-20" not in response.text
 
 
-def test_malformed_json_is_a_validation_error(client):
+@pytest.mark.parametrize(
+    "content", [b"{not json", b'{"reason": "\xff"}'], ids=["not-json", "not-utf8"]
+)
+def test_malformed_body_is_a_validation_error(client, content):
     response = client.post(
         "/requests",
         headers=as_user("alice", key="key-1") | {"Content-Type": "application/json"},
-        content=b"{not json",
+        content=content,
     )
 
     assert response.status_code == 422
-    assert response.json()["code"] == "VALIDATION_ERROR"
+    body = response.json()
+    assert body["code"] == "VALIDATION_ERROR"
+    assert [error["field"] for error in body["details"]["errors"]] == ["body"]

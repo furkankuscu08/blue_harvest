@@ -131,6 +131,7 @@ def test_comment_at_its_length_limits_is_accepted(client, outcome, length):
     ("field", "value"),
     [
         ("outcome", "PENDING"),
+        ("outcome", " APPROVED "),
         ("expected_version", "1"),
         ("expected_version", True),
         ("expected_version", 1.0),
