@@ -16,6 +16,9 @@
     python guard/harness.py calibrate <mutant>
         Run verify on three hand-written tests whose result is known.
 
+    python guard/harness.py replay <mutant> <run-dir>
+        Run verify on the tests recorded by guard/generate.py, without an LLM.
+
 Every run uses a fresh export of the baseline commit, so no stale file or
 bytecode from an earlier run can leak in. Tests run in a container with no
 network, a read-only file system, limited resources and a time limit.
@@ -24,6 +27,7 @@ network, a read-only file system, limited resources and a time limit.
 import argparse
 import ast
 import filecmp
+import json
 import shutil
 import subprocess
 import sys
@@ -237,8 +241,11 @@ def agent_changes(mutant: str, workspace: Path) -> tuple[list[Path], list[str]]:
     return added, [str(v) for v in violations]
 
 
-def verify(mutant: str, workspace: Path) -> list[tuple[str, str, str]]:
+def verify(
+    mutant: str, workspace: Path, recorded_violations: list[str] = ()
+) -> list[tuple[str, str, str]]:
     added, violations = agent_changes(mutant, workspace)
+    violations += list(recorded_violations)
     print(f"Agent added: {[str(p) for p in added] or 'nothing'}")
     if violations:
         print(f"Rule violations, so every result is an invalid run: {violations}")
@@ -292,6 +299,15 @@ def calibrate(mutant: str) -> int:
     return 0 if ok else 1
 
 
+def replay(mutant: str, run_dir: Path) -> list[tuple[str, str, str]]:
+    record = json.loads((run_dir / "run.json").read_text())
+    with tempfile.TemporaryDirectory(prefix="guard-") as tmp:
+        workspace = build_workspace(mutant, Path(tmp) / "workspace")
+        for test_file in sorted((run_dir / "tests").glob("*.py")):
+            shutil.copy(test_file, workspace / "tests" / test_file.name)
+        return verify(mutant, workspace, record["rule_violations"])
+
+
 def mutant_config(mutant: str) -> dict:
     return CONFIG["mutants"][mutant]
 
@@ -300,7 +316,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
     )
-    parser.add_argument("command", choices=["prove", "prepare", "verify", "calibrate"])
+    parser.add_argument("command", choices=["prove", "prepare", "verify", "calibrate", "replay"])
     parser.add_argument("mutant", choices=sorted(CONFIG["mutants"]))
     parser.add_argument("workspace", nargs="?", type=Path)
     args = parser.parse_args()
@@ -311,10 +327,13 @@ def main() -> int:
     if args.command == "calibrate":
         return calibrate(args.mutant)
     if args.workspace is None:
-        parser.error(f"{args.command} needs a workspace directory")
+        parser.error(f"{args.command} needs a directory")
     if args.command == "prepare":
         return prepare(args.mutant, args.workspace.resolve())
-    rows = verify(args.mutant, args.workspace.resolve())
+    if args.command == "replay":
+        rows = replay(args.mutant, args.workspace.resolve())
+    else:
+        rows = verify(args.mutant, args.workspace.resolve())
     return 0 if rows else 1
 
 
