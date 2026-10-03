@@ -40,7 +40,9 @@ def declined_request() -> ExceptionRequest:
 def approved_request(by: Actor = ALICE) -> ExceptionRequest:
     """Version 2: revision 1 approved by carol."""
     request = pending_request(by=by)
-    decide(request, CAROL, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T1)
+    decide(
+        request, CAROL, expected_version=1, outcome=Outcome.APPROVED, comment="Fits policy.", now=T1
+    )
     return request
 
 
@@ -167,7 +169,9 @@ def test_earlier_revisions_never_change():
     before = first_revision()
 
     revise(request, ALICE, expected_version=2, discount_bps=20, reason="Matches offer.", now=T2)
-    decide(request, CAROL, expected_version=3, outcome=Outcome.APPROVED, comment=None, now=T3)
+    decide(
+        request, CAROL, expected_version=3, outcome=Outcome.APPROVED, comment="Fits policy.", now=T3
+    )
 
     assert request.revisions[0] is first
     assert first_revision() == before
@@ -225,7 +229,9 @@ def test_reviewer_approves_latest_revision():
     revise(request, ALICE, expected_version=1, discount_bps=20, reason="Matches offer.", now=T1)
     before = revision_contents(request)
 
-    decide(request, CAROL, expected_version=2, outcome=Outcome.APPROVED, comment=None, now=T2)
+    decide(
+        request, CAROL, expected_version=2, outcome=Outcome.APPROVED, comment="Fits policy.", now=T2
+    )
 
     assert revision_contents(request) == before
     first, second = request.revisions
@@ -235,7 +241,7 @@ def test_reviewer_approves_latest_revision():
         Outcome.APPROVED,
         "carol",
         T2,
-        None,
+        "Fits policy.",
     )
     assert request.status == Status.APPROVED
     assert request.version == 3
@@ -304,7 +310,7 @@ def test_stale_version_cannot_approve(expected_version):
             CAROL,
             expected_version=expected_version,
             outcome=Outcome.APPROVED,
-            comment=None,
+            comment="Fits policy.",
             now=T2,
         ),
     )
@@ -362,7 +368,7 @@ def test_approved_request_cannot_be_decided_again(outcome):
         lambda r: revise(r, CAROL, expected_version=1, discount_bps=20, reason="x", now=T2),
         # alice is not a reviewer, is the creator, has a stale version, and the request is approved.
         lambda r: decide(
-            r, ALICE, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T2
+            r, ALICE, expected_version=1, outcome=Outcome.APPROVED, comment="Fits policy.", now=T2
         ),
     ],
     ids=["revise", "decide"],
@@ -384,7 +390,12 @@ def test_role_is_checked_first(action):
         (
             DAVE,
             lambda r: decide(
-                r, DAVE, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T2
+                r,
+                DAVE,
+                expected_version=1,
+                outcome=Outcome.APPROVED,
+                comment="Fits policy.",
+                now=T2,
             ),
             ErrorCode.FOUR_EYES_VIOLATION,
         ),
@@ -402,7 +413,7 @@ def test_relation_is_checked_before_version_and_state(creator, action, expected_
     [
         lambda r: revise(r, ALICE, expected_version=1, discount_bps=20, reason="x", now=T2),
         lambda r: decide(
-            r, CAROL, expected_version=1, outcome=Outcome.APPROVED, comment=None, now=T2
+            r, CAROL, expected_version=1, outcome=Outcome.APPROVED, comment="Fits policy.", now=T2
         ),
     ],
     ids=["revise", "decide"],
@@ -449,7 +460,9 @@ def test_worked_example_decline_revise_approve():
         now=T2,
     )
     record()
-    decide(request, CAROL, expected_version=3, outcome=Outcome.APPROVED, comment=None, now=T3)
+    decide(
+        request, CAROL, expected_version=3, outcome=Outcome.APPROVED, comment="Fits policy.", now=T3
+    )
     record()
 
     assert steps == [
