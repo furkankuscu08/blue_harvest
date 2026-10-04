@@ -50,7 +50,7 @@ One page without a build step. It should be pleasant to use, not only functional
 - One create submission is one idempotency key plus one payload; a retry resends exactly that pair.
   - A draft that was not sent yet is discarded when the acting user changes.
   - A create whose outcome is unknown (timeout, network error) keeps its caller, key and payload: the form and the user selection are locked and only "Retry" is offered, until a definite response arrives.
-  - The key lives in the page only. After a reload, a new submission gets `REQUEST_ALREADY_EXISTS`, and the UI leads the user to the existing request from the id in that error.
+  - The key lives in the page only, so a replay is not guaranteed across a reload. If the earlier create was stored, a new submission gets `REQUEST_ALREADY_EXISTS` and the UI leads the user to the existing request from the id in that error; if it was not stored, the new submission simply creates the request.
 
 The demo script for the UI is drafted while the UI is built: create, decline, revise, act with a stale version in a second tab, approve, read the approved discount as the mortgage process. Automated browser tests are out of scope because of their setup and maintenance cost within this budget.
 
@@ -69,8 +69,8 @@ The invariant guard is described in [guard/README.md](../guard/README.md): an ag
 
 Problems found on days 6 and 7 are written down as GitHub issues and fixed on day 8. Only what is on the list is fixed; new ideas go to the README as next steps.
 
-1. A clean `docker compose up` followed by `scripts/smoke.sh`.
-2. The written UI script from start to end, including the two-tab stale version.
+1. `scripts/smoke.sh`, which starts from an empty volume and stops the service at the end.
+2. `docker compose up --build -d --wait`, then the written UI script from start to end, including the two-tab stale version.
 3. The error paths a user can reach in the UI, and a lost connection, each with a message the user can act on: validation, stale version, wrong role or owner, four-eyes. Errors only an API client can cause are covered by the API tests.
 4. A seed reset while the UI is open.
 5. Small open items: the ADR reference in `assumptions-and-scope.md`, and a consistency check in the API concurrency test (after the race, the request's status agrees with the decision on its latest revision), confirmed once against a build with broken locking.
@@ -118,7 +118,7 @@ No new behaviour from day 9 on. Idempotent retry is proven at API level (an auto
 - The backend, the tests and `guard/` stay as they are. The cost was in the process: review and mutant rounds are now limited to concrete risks.
 - The smoke script moved into the repository as `scripts/smoke.sh`. It is the API demo and gets no new checks.
 - Day 8 became a fixed checklist; "hardening" had no end.
-- The transaction race experiment stays a one-off, recorded in `ai-usage.md`. A script for it would need maintenance; instead the concurrency test will state the broken outcome directly, so the same evidence runs in CI.
+- The transaction race experiment stays a one-off, recorded in `ai-usage.md`. A script for it would need maintenance; instead the concurrency test will reject the broken end state directly, and that check runs in CI. It does not replace the comparison of the three transaction setups.
 - The UI is treated as a real deliverable, not as the first thing to cut.
 - This file was rewritten to show only the current plan. Decisions about behaviour that it used to repeat, some of them outdated, now live only in the documents named at the top.
 
