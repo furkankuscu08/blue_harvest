@@ -1,5 +1,6 @@
 """Serving the UI, from docs/ui-design.md. What the page does is checked by hand."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -28,6 +29,16 @@ def test_every_ui_file_is_served_as_its_own_type(client):
 
         assert response.status_code == 200, path.name
         assert response.headers["content-type"].startswith(CONTENT_TYPES[path.suffix]), path.name
+        assert response.content == path.read_bytes(), path.name
+
+
+def test_the_page_and_its_modules_refer_to_the_files_that_exist():
+    # A wrong path in the page or in an import leaves the page blank.
+    referred = set(re.findall(r'"/static/([^"]+)"', (STATIC / "index.html").read_text()))
+    for script in STATIC.glob("*.js"):
+        referred |= set(re.findall(r'from "\./([^"]+)"', script.read_text()))
+
+    assert referred == {path.name for path in STATIC.iterdir()} - {"index.html"}
 
 
 @pytest.mark.parametrize("method", ["GET", "POST"])

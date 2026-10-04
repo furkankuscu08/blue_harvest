@@ -25,7 +25,7 @@ async function call(method, path, { user, body, headers = {} } = {}) {
     if (response.status >= 500) return UNCERTAIN;
     const data = await response.json();
     if (response.ok) return { kind: "ok", data };
-    if (typeof data.code !== "string") return UNCERTAIN;
+    if (typeof data.code !== "string" || typeof data.message !== "string") return UNCERTAIN;
     return {
       kind: "error",
       status: response.status,

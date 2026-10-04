@@ -40,6 +40,8 @@ Pull requests describe the change only. This log records what the agents did, wh
 - Two gaps had been open since [#13]: no test checked that a write endpoint builds its response before the commit, or that it validates the body before looking up the request. The test review for revise found both; the new tests cover revise and decide. [#16]
 - The UI design went through two review rounds before any code. A reviewer moved the current discount and reason above the history, so that a reviewer decides with the reason in view, and replaced "show every action, disabled" with "hide what is not your role, explain what is not possible now". It also showed that the builder's rule for late responses, "same user and same screen", let through an earlier refresh and a switch from one user to another and back. One counter for all reads replaced it. [design](ui-design.md), [#19]
 - The builder wrote a discount as `25 bps (0.25%)`. A reviewer pointed out that a percentage of a rate and percentage points are different things. The UI shows basis points. [#19]
+- The review of the read-only UI found two defects that my check in the browser could not have shown. After a switch to the mortgage process, an earlier user's late response could still be drawn, in the moment before the browser reported the new address. And when the first read of the users failed, a click on another screen removed "Try again" for good. The builder reproduced both with a scripted page and controlled responses, before and after the fix. The second review showed that the fix was incomplete and had added a defect of its own: navigation now started a second read of the users, and the first one, failing late, could overwrite a working screen. The read of the users now takes part in the same check. [#19]
+- The same review served every script and stylesheet with an empty body, and the UI tests still passed. They now compare the content, and check that every path in the page and in the imports names a file that exists. [#19]
 
 ### Suggestions are weighed, not followed
 
@@ -49,6 +51,7 @@ Pull requests describe the change only. This log records what the agents did, wh
 - A test for a configurable discount limit: the setting was removed instead, because nobody needs it. The limit is now a constant (A5). [#13]
 - A controllable clock, so that a story test would not rely on two decisions getting different timestamps: rejected as too much for one assertion. The assertion was dropped; who decided already tells the two decisions apart. [#16]
 - A reviewer's screen sketch used the company's name as the product name in the top bar: rejected. The page is called "Pricing exceptions". [#19]
+- Checking the shape of every answer in the UI: rejected. The page and the API come from one service, and the API's schemas already define the shapes; a second copy in JavaScript would drift. Instead, an answer a screen cannot be built from shows an error with "Try again". Before that, it left the page on "Loading". The first version of this guard covered only the last step, drawing the screen; the reviewer found two earlier steps outside it, so it now covers the whole read. [#19]
 
 ### The builder is wrong too
 

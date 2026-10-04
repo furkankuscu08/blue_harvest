@@ -9,10 +9,10 @@ const content = document.getElementById("content");
 const select = document.getElementById("acting-user");
 const roles = document.getElementById("acting-roles");
 
-let users = [];
+let users = null; // null until the list of users has been read
 let user = null;
-// Increases with every change of user or screen and every refresh. A response
-// is shown only if no newer read has started since.
+// Increases with every read. A response is shown only if no newer read has
+// started since and the acting user and the address are still the same.
 let reads = 0;
 
 function route() {
@@ -58,12 +58,25 @@ function failure(result, screen) {
   return views.message(
     "The service could not be reached",
     "Nothing was changed. Check that the service is running, then try again.",
-    views.el("button", { type: "button", onclick: () => show() }, "Try again"),
+    tryAgain(show),
   );
 }
 
+const tryAgain = (retry) => views.el("button", { type: "button", onclick: () => retry() }, "Try again");
+
+// The shape of an answer is not checked field by field. Whatever goes wrong
+// while an answer is turned into a screen ends here, not on "Loading".
+const unexpected = (retry) =>
+  views.message("This cannot be shown", "The service sent an unexpected answer.", tryAgain(retry));
+
 async function show({ focus } = {}) {
+  if (!users) return start();
   const read = ++reads;
+  const actor = user;
+  const address = location.hash;
+  // The user or the address can change before the event that starts the next
+  // read has arrived, so the counter alone is not enough.
+  const stale = () => read !== reads || actor !== user || address !== location.hash;
   const target = route();
   for (const link of document.querySelectorAll("[data-screen]")) {
     const here = link.dataset.screen === (target.screen === "request" ? "requests" : target.screen);
@@ -78,22 +91,28 @@ async function show({ focus } = {}) {
   }
 
   content.replaceChildren(views.loading());
-  const [results, approved] = await load(target, user);
-  if (read !== reads) return;
-
-  const failed = results.find((result) => result.kind !== "ok");
-  if (failed) {
-    content.replaceChildren(failure(failed, target.screen));
+  try {
+    const [results, approved] = await load(target, actor);
+    if (stale()) return;
+    const failed = results.find((result) => result.kind !== "ok");
+    if (failed) {
+      content.replaceChildren(failure(failed, target.screen));
+      return;
+    }
+    const onRefresh = () => show({ focus: "refresh" });
+    const data = { users, user: actor, approved, onRefresh };
+    if (target.screen === "request") {
+      const [request, applications] = results.map((r) => r.data);
+      content.replaceChildren(views.requestScreen({ request, applications, ...data }));
+    } else {
+      const [requests, applications] = results.map((r) => r.data);
+      const screen =
+        target.screen === "applications" ? views.applicationsScreen : views.requestsScreen;
+      content.replaceChildren(screen({ requests, applications, ...data }));
+    }
+  } catch {
+    if (!stale()) content.replaceChildren(unexpected(show));
     return;
-  }
-  const onRefresh = () => show({ focus: "refresh" });
-  if (target.screen === "request") {
-    const [request, applications] = results.map((r) => r.data);
-    content.replaceChildren(views.requestScreen({ request, applications, users, user, onRefresh }));
-  } else {
-    const [requests, applications] = results.map((r) => r.data);
-    const screen = target.screen === "applications" ? views.applicationsScreen : views.requestsScreen;
-    content.replaceChildren(screen({ requests, applications, users, user, approved, onRefresh }));
   }
   // The screen was rebuilt, so keyboard focus has to be put back.
   if (focus === "refresh") content.querySelector("[data-refresh]").focus();
@@ -114,24 +133,33 @@ select.addEventListener("change", () => {
 
 window.addEventListener("hashchange", () => show({ focus: "content" }));
 
+// Reads the users. It can run more than once, because every screen starts it
+// again until the users are known; only the latest run may change the page.
 async function start() {
+  const read = ++reads;
   content.replaceChildren(views.loading());
-  const result = await api.getUsers();
-  if (result.kind !== "ok") {
-    content.replaceChildren(
-      views.message(
-        "The service could not be reached",
-        "The list of users could not be read.",
-        views.el("button", { type: "button", onclick: start }, "Try again"),
-      ),
+  try {
+    const result = await api.getUsers();
+    if (read !== reads) return;
+    if (result.kind !== "ok") {
+      content.replaceChildren(
+        views.message(
+          "The service could not be reached",
+          "The list of users could not be read.",
+          tryAgain(start),
+        ),
+      );
+      return;
+    }
+    select.replaceChildren(
+      views.el("option", { value: "" }, "Choose a user…"),
+      ...result.data.map((u) => views.el("option", { value: u.id }, u.name)),
     );
+    users = result.data;
+  } catch {
+    if (read === reads) content.replaceChildren(unexpected(start));
     return;
   }
-  users = result.data;
-  select.replaceChildren(
-    views.el("option", { value: "" }, "Choose a user…"),
-    ...users.map((u) => views.el("option", { value: u.id }, u.name)),
-  );
   setUser(sessionStorage.getItem(USER_KEY));
   show();
 }

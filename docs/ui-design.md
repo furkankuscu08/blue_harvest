@@ -49,7 +49,9 @@ On an `APPROVED` request the panel shows "Approved requests cannot be changed."
 
 ## Reading
 
-One counter covers all reads. It increases when the acting user changes, when the screen changes and on "Refresh". A response is shown only if the counter still has the value it had when the read started. This drops a late response for an earlier user, an earlier screen or an earlier refresh. It applies to reads only; the result of a submission is never dropped.
+A read remembers the acting user and the address it started with, and its number from a counter that increases with every read. Its response is shown only if no newer read has started and the user and the address are still the same. This drops a late response for an earlier user, an earlier screen or an earlier refresh. The counter alone is not enough: after a change of user or address, the event that starts the next read can arrive later than an old response. The read of the users at the start takes its number from the same counter. It applies to reads only; the result of a submission is never dropped.
+
+The UI does not check the shape of every answer field by field; the API's schemas define it. An answer that cannot be turned into a screen, at any step between the response and the page, is shown as "This cannot be shown" with "Try again", never as an endless "Loading". Until the list of users has been read, every screen offers to read it again.
 
 ## Submitting
 
