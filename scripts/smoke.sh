@@ -16,16 +16,18 @@ WORK=$(mktemp -d)
 PASS=0
 FAIL=0
 
+trap 'docker compose down -v >/dev/null 2>&1; rm -rf "$WORK"' EXIT
 docker compose down -v >/dev/null 2>&1
 echo "Building and starting the service on port $APP_PORT..."
-if ! docker compose up --build -d --wait --wait-timeout 90 >/dev/null 2>&1; then
-    echo "The service did not start."; docker compose logs; exit 1
+if ! docker compose up --build -d --wait --wait-timeout 90 >"$WORK/compose" 2>&1; then
+    echo "The service did not start."; tail -n 5 "$WORK/compose"; docker compose logs; exit 1
 fi
-trap 'docker compose down -v >/dev/null 2>&1; rm -rf "$WORK"' EXIT
+
+CURL=(-s --connect-timeout 5 --max-time 30 -o "$WORK/body" -w '%{http_code}')
 
 # call METHOD PATH USER [IDEMPOTENCY_KEY] [JSON] -> prints the status; body goes to $WORK/body
 call() {
-    local args=(-s -o "$WORK/body" -w '%{http_code}' -X "$1" "$BASE$2" -H "X-User-Id: $3")
+    local args=("${CURL[@]}" -X "$1" "$BASE$2" -H "X-User-Id: $3")
     [[ -n "${4:-}" ]] && args+=(-H "Idempotency-Key: $4")
     [[ -n "${5:-}" ]] && args+=(-H 'Content-Type: application/json' -d "$5")
     curl "${args[@]}"
@@ -145,11 +147,11 @@ echo "18. the list of requests shows the approved request first"
 status=$(call GET /requests carol)
 check "latest change first" "200 APP-1001 APPROVED 4 20" \
     "$status $(jq -r '.[0] | "\(.application_id) \(.status) \(.version) \(.current_discount_bps)"' "$WORK/body")"
-status=$(curl -s -o "$WORK/body" -w '%{http_code}' "$BASE/requests")
+status=$(curl "${CURL[@]}" "$BASE/requests")
 check "the list needs a known user" "401 UNKNOWN_USER" "$(outcome "$status")"
 
 echo "19. the list of users needs no identity"
-status=$(curl -s -o "$WORK/body" -w '%{http_code}' "$BASE/users")
+status=$(curl "${CURL[@]}" "$BASE/users")
 check "five seed users" "200 alice bob carol dave mortgage-process" \
     "$status $(jq -r '[.[].id] | join(" ")' "$WORK/body")"
 

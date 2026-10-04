@@ -47,7 +47,10 @@ One page without a build step. It should be pleasant to use, not only functional
 - Create, revise, approve and decline.
 - The discount shows its unit, a submit cannot be sent twice, and an error says what to do next.
 - The UI sends the version the user sees. After `STALE_VERSION` the user looks at the request again; nothing is resubmitted automatically.
-- One create submission is one idempotency key plus one payload; a retry resends exactly that pair. Changing the acting user discards an open create form and its key.
+- One create submission is one idempotency key plus one payload; a retry resends exactly that pair.
+  - A draft that was not sent yet is discarded when the acting user changes.
+  - A create whose outcome is unknown (timeout, network error) keeps its caller, key and payload: the form and the user selection are locked and only "Retry" is offered, until a definite response arrives.
+  - The key lives in the page only. After a reload, a new submission gets `REQUEST_ALREADY_EXISTS`, and the UI leads the user to the existing request from the id in that error.
 
 The demo script for the UI is drafted while the UI is built: create, decline, revise, act with a stale version in a second tab, approve, read the approved discount as the mortgage process. Automated browser tests are out of scope because of their setup and maintenance cost within this budget.
 
@@ -68,15 +71,15 @@ Problems found on days 6 and 7 are written down as GitHub issues and fixed on da
 
 1. A clean `docker compose up` followed by `scripts/smoke.sh`.
 2. The written UI script from start to end, including the two-tab stale version.
-3. Every error code from the contract produced once in the UI, with a message a user can act on.
+3. The error paths a user can reach in the UI, and a lost connection, each with a message the user can act on: validation, stale version, wrong role or owner, four-eyes. Errors only an API client can cause are covered by the API tests.
 4. A seed reset while the UI is open.
-5. Small open items: the ruff hook that removes a just-added import, the ADR reference in `assumptions-and-scope.md`, and the transaction race experiment as a script in the repository.
+5. Small open items: the ADR reference in `assumptions-and-scope.md`, and a consistency check in the API concurrency test (after the race, the request's status agrees with the decision on its latest revision), confirmed once against a build with broken locking.
 
 ### Day 9: README and documents
 
 - "Try it in five minutes": a few commands and one address.
 - Deliberate assumptions, labelled as ours; real time spent; a short "with more time" section; what changes in production, including PostgreSQL.
-- A traceability table with one line per invariant: rule, test.
+- One traceability table that starts from the requirements R1 to R6: requirement, behaviour, test or run evidence, with the related invariants in the same row.
 - How this way of working carries over to a regulated client.
 - `api-contract.md` loses its repetitions, to about 200 lines. The order of checks and the retry rules stay.
 - The demo script is run and the result recorded.
@@ -115,6 +118,7 @@ No new behaviour from day 9 on. Idempotent retry is proven at API level (an auto
 - The backend, the tests and `guard/` stay as they are. The cost was in the process: review and mutant rounds are now limited to concrete risks.
 - The smoke script moved into the repository as `scripts/smoke.sh`. It is the API demo and gets no new checks.
 - Day 8 became a fixed checklist; "hardening" had no end.
+- The transaction race experiment stays a one-off, recorded in `ai-usage.md`. A script for it would need maintenance; instead the concurrency test will state the broken outcome directly, so the same evidence runs in CI.
 - The UI is treated as a real deliverable, not as the first thing to cut.
 - This file was rewritten to show only the current plan. Decisions about behaviour that it used to repeat, some of them outdated, now live only in the documents named at the top.
 
