@@ -2,6 +2,8 @@
 
 Frozen on 2026-10-03 after three review rounds. Only the time log is updated from here on. Later changes to decisions are recorded in the ADRs and day 1 documents, not here.
 
+The schedule that applies is in [Changes after day 3](#changes-after-day-3), as adjusted by [Changes after day 5](#changes-after-day-5). Where those sections differ from the text above them, they win.
+
 ## Stack
 
 | Area | Choice | Why / production note |
@@ -157,6 +159,25 @@ Decided on 2026-10-03 after a scope review, with a second agent as an extra opin
 Remaining estimate: 19 hours. Projected total, including planning and the 14 hours spent up to the end of day 3: about 33 hours.
 
 If time runs short, cut first: optional extra runs, then UI presentation detail. The idempotent replay experiment is not cut.
+
+## Changes after day 5
+
+Decided on 2026-10-04 after a look back at the first five days, with a second agent as an extra opinion. The API is complete; the backend, the tests and `guard/` stay as they are.
+
+- **The smoke script is in the repository**, as `scripts/smoke.sh`. It is the API demo and gets no new checks. The UI demo is a separate written script, drafted on day 6.
+- **UI.** One page without a build step, using the public API. It should be pleasant to use, not only functional: the acting user is always visible, the discount shows its unit, a submit cannot be sent twice, and an error says what to do next. It sends the version the user sees and never resubmits by itself after `STALE_VERSION`. Changing the acting user discards an open create form and its idempotency key.
+- **Agent experiment.** One mutant, a neutral prompt and at most two generation runs. The result is recorded as it comes out; the prompt is not tuned until it succeeds.
+- **Day 8 is a fixed checklist, not open-ended hardening.** Problems found on days 6 and 7 are written down as GitHub issues and fixed on day 8. Then: a clean `docker compose up` with the smoke script, the written UI script, every error code produced once in the UI, a seed reset while the UI is open, and the small open items (ruff hook, the ADR reference in `assumptions-and-scope.md`, the race experiment as a script in the repository). New ideas go to the README as next steps.
+- **Day 9.** The README gets a "try it in five minutes" section and a one-line-per-invariant traceability table. `api-contract.md` loses its repetitions, to about 200 lines; the order of checks and the retry rules stay. No new behaviour from day 9 on.
+- **Review and tests.** No new test or mutant without a concrete wrong behaviour it guards against.
+
+| Day | Outcome | Done when |
+|---|---|---|
+| 6 | UI and a draft of the demo script | The main story can be completed on screen |
+| 7 | Idempotent replay experiment | The result is recorded and can be verified without an LLM |
+| 8 | Issue list and checklist | The list is closed and a clean Docker run is confirmed |
+| 9 | README, contract clean-up, recorded demo | Someone else can follow the story from the README alone |
+| 10 | Fresh-clone rehearsal, walkthrough rehearsal | The buffer is still there |
 
 ## Time log
 

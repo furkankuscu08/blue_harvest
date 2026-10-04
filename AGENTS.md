@@ -47,6 +47,7 @@ uvicorn app.main:create_app --factory --reload              # run locally on :80
 docker compose up --build                                   # run in Docker
 python -m app.seed --reset                                  # empty the database, seed again
 docker compose exec app python -m app.seed --reset          # the same, in Docker
+scripts/smoke.sh                                            # main story against Docker; deletes the local volume
 ```
 
 After editing `requirements.in` or `requirements-dev.in`, regenerate the pinned files:
