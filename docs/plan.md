@@ -30,27 +30,24 @@ Days 1 to 5 are done; the API is complete. Hours for days 6 to 10 are estimates.
 | 3 | 3 | Domain core, test-first; invariant guard spike with the first recorded run | Done |
 | 4 | 3 | Identity, errors, seed and reset, create with idempotency, get, decide, approved discount | Done |
 | 5 | 3 | Revise, the full decline-revise-approve story, concurrency test at API level, list endpoints | Done |
-| 6 | 3 | UI and a draft of the demo script | The main story can be completed on screen |
+| 6 | 5 | UI and a draft of the demo script | The main story can be completed on screen |
 | 7 | 3 | Idempotent replay experiment | The result is recorded and can be verified without an LLM |
 | 8 | 2 | Issue list and checklist | The list is closed and a clean Docker run is confirmed |
 | 9 | 3 | README, contract clean-up, recorded demo | Someone else can follow the story from the README alone |
 | 10 | 2 | Fresh-clone rehearsal, walkthrough rehearsal | The buffer is still there |
 
-Spent so far, including 4 hours of planning: 20 hours. Remaining estimate: 13 hours. Projected total: about 33 hours.
+Spent so far, including 4 hours of planning: 20 hours. Remaining estimate: 15 hours. Projected total: about 35 hours.
 
 ### Day 6: UI
 
-One page without a build step. It should be pleasant to use, not only functional.
+How the UI behaves is defined in [ui-design.md](ui-design.md). It is built in two pull requests:
 
-- Choose who to act as; the acting user is always visible.
-- List of applications and requests; request detail with every revision and decision.
-- Create, revise, approve and decline.
-- The discount shows its unit, a submit cannot be sent twice, and an error says what to do next.
-- The UI sends the version the user sees. After `STALE_VERSION` the user looks at the request again; nothing is resubmitted automatically.
-- One create submission is one idempotency key plus one payload; a retry resends exactly that pair.
-  - A draft that was not sent yet is discarded when the acting user changes.
-  - A create whose outcome is unknown (timeout, network error) keeps its caller, key and payload: the form and the user selection are locked and only "Retry" is offered, until a definite response arrives.
-  - The key lives in the page only, so a replay is not guaranteed across a reload. If the earlier create was stored, a new submission gets `REQUEST_ALREADY_EXISTS` and the UI leads the user to the existing request from the id in that error; if it was not stored, the new submission simply creates the request.
+1. Read-only: serving the page, choosing who to act as, the list of requests, the request detail, the applications with the approved discount. I look at it in the browser with the seed data before the second part starts.
+2. Actions: create, revise, approve and decline, with the error, stale version and retry behaviour.
+
+Checked by hand, because there are no browser tests: the demo script; switching users quickly and refreshing twice; a stale version keeps the draft and keeps the action closed until a reload; a submission while the connection is down; the main story on a narrow screen and with the keyboard only. The connection check covers the error and the "Retry" in the UI. It does not prove that a create that was stored and whose response was lost is replayed; the API test and the smoke script prove that.
+
+A defect in the code a pull request adds is fixed in that pull request when it breaks the main story. Other findings become issues for day 8.
 
 The demo script for the UI is drafted while the UI is built: create, decline, revise, act with a stale version in a second tab, approve, read the approved discount as the mortgage process. Automated browser tests are out of scope because of their setup and maintenance cost within this budget.
 
@@ -93,7 +90,7 @@ No new behaviour from day 9 on. Idempotent retry is proven at API level (an auto
 - Small, meaningful commits and pull requests; an agent reviews, I approve the merge.
 - Review depth follows risk: transactions, idempotency, concurrency and the harness get a full review; UI layout and simple lists a short one.
 - No new test or mutant without a concrete wrong behaviour it guards against.
-- If time runs short, cut first: optional extra agent runs, then UI presentation detail.
+- If time runs short, cut first: optional extra agent runs, then UI decoration. Labels, keyboard use, a layout that fits a narrow screen, and the retry and stale version behaviour are not cut.
 - Never cut: run and test instructions, assumptions, time spent, both bonuses with meaningful verification evidence, isolation of agent-written tests.
 - [ai-usage.md](ai-usage.md) is written as the work happens.
 - Log time spent per day below.
@@ -121,6 +118,12 @@ No new behaviour from day 9 on. Idempotent retry is proven at API level (an auto
 - The transaction race experiment stays a one-off, recorded in `ai-usage.md`. A script for it would need maintenance; instead the concurrency test will reject the broken end state directly, and that check runs in CI. It does not replace the comparison of the three transaction setups.
 - The UI is treated as a real deliverable, not as the first thing to cut.
 - This file was rewritten to show only the current plan. Decisions about behaviour that it used to repeat, some of them outdated, now live only in the documents named at the top.
+
+**After the UI design review (2026-10-04).**
+
+- The UI design moved into its own document, `ui-design.md`, because the UI has no automated tests and needs written rules to be checked against.
+- The day 6 estimate rose from 3 to 5 hours and the total from about 33 to about 35: three screens with addresses instead of one, and the rules for late responses and uncertain results.
+- Cut from the design to stay small: filters on the list of requests, a separate handling for a lost connection (it shares the stale version path), and a text for every error code (the API's own message is shown).
 
 ## Time log
 

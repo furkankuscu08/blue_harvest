@@ -38,6 +38,8 @@ Pull requests describe the change only. This log records what the agents did, wh
 - Seeding checked only the users table, so a database with other rows was seeded again. Fixed with a regression test. [#12]
 - A body that is not valid UTF-8 got the framework's plain 400 instead of the contract's error body. Fixed with a test. [#13]
 - Two gaps had been open since [#13]: no test checked that a write endpoint builds its response before the commit, or that it validates the body before looking up the request. The test review for revise found both; the new tests cover revise and decide. [#16]
+- The UI design went through two review rounds before any code. A reviewer moved the current discount and reason above the history, so that a reviewer decides with the reason in view, and replaced "show every action, disabled" with "hide what is not your role, explain what is not possible now". It also showed that the builder's rule for late responses, "same user and same screen", let through an earlier refresh and a switch from one user to another and back. One counter for all reads replaced it. [design](ui-design.md), [#19]
+- The builder wrote a discount as `25 bps (0.25%)`. A reviewer pointed out that a percentage of a rate and percentage points are different things. The UI shows basis points. [#19]
 
 ### Suggestions are weighed, not followed
 
@@ -46,6 +48,7 @@ Pull requests describe the change only. This log records what the agents did, wh
 - A test that replays after an app restart: rejected. Idempotency records live in a table, so an in-memory cache is not a plausible wrong implementation. [#13]
 - A test for a configurable discount limit: the setting was removed instead, because nobody needs it. The limit is now a constant (A5). [#13]
 - A controllable clock, so that a story test would not rely on two decisions getting different timestamps: rejected as too much for one assertion. The assertion was dropped; who decided already tells the two decisions apart. [#16]
+- A reviewer's screen sketch used the company's name as the product name in the top bar: rejected. The page is called "Pricing exceptions". [#19]
 
 ### The builder is wrong too
 
@@ -56,6 +59,7 @@ Pull requests describe the change only. This log records what the agents did, wh
 - This log needed review too: its first version had three overstated claims. [#5]
 - The check that two requests in the concurrency test really overlap went wrong twice. The first version failed on correct code: SQLAlchemy ignored `insert=True` for that event, so the check ran after the lock wait. A trace showed it. The second version could still fail when one request started late; a reviewer showed it with a 600 ms delay. Both write transactions now wait for each other just before `BEGIN`. [#16]
 - The builder's mutant script restored files with `git checkout`, which also erased the uncommitted implementation, so nine of ten mutants ran against the old code. Their output made no sense, which exposed it. They were rerun from a backup. After the rerun, nine of ten mutants failed a test. The tenth loads the caller in a separate read session: it breaks the `AGENTS.md` rule but has no observable effect, because no endpoint changes users. The mutant runs were one-off scripts outside the repository. [#16]
+- The builder gave "it would change the answer for unknown routes" as the reason for not mounting the UI's files at the root, and wrote a test for it. Its own hand mutant, a mount at the root, passed that test: a `GET` still got the framework's 404, and only other methods changed, to a 405. The test now covers `POST` as well and fails for the mutant. [#19]
 
 ### A claim counts only with a check that fails without it
 
@@ -72,6 +76,8 @@ Pull requests describe the change only. This log records what the agents did, wh
 - Before merging the first API slice I ran a smoke script against the service in Docker: create, replay, stale retry, the downstream read and four-eyes. 10 of 10 checks passed. [#13]
 - Before merging revise I ran the extended smoke script: a reset inside Docker, then 35 bps declined, revised to 20, a stale retry, a revise by another manager, the approval, and the downstream read of revision 2 at 20 bps. 20 of 20 checks passed. [#16]
 - Before merging the list endpoints I ran the smoke script again, extended with the list of requests after the full story, the same list without a caller, and the list of users without a caller. 23 of 23 checks passed. [#17]
+- The builder called the UI the largest scope risk and proposed to keep it deliberately minimal. I disagreed: the UI is a deliverable, and it should be simple but pleasant to use. After the design grew over two review rounds, I asked again where it was overengineered; the builder cut three things, listed in the [plan](plan.md). [#19]
+- The builder cannot open a browser, so it could not see the page it wrote. Before merging the read-only UI I looked at every screen with the seed data, as five users and in a narrow window. A screenshot showed that opening a request scrolled the top bar out of view, and that the decision on an approved or declined request was only at the bottom of the page. Both were fixed and I looked again. Switching users quickly, pressing "Refresh" several times in a row and moving through the page with the Tab key showed no problem. [#19]
 
 ## What I learned so far
 
@@ -90,3 +96,4 @@ Pull requests describe the change only. This log records what the agents did, wh
 [#13]: https://github.com/furkankuscu08/blue_harvest/pull/13
 [#16]: https://github.com/furkankuscu08/blue_harvest/pull/16
 [#17]: https://github.com/furkankuscu08/blue_harvest/pull/17
+[#19]: https://github.com/furkankuscu08/blue_harvest/pull/19
