@@ -10,7 +10,7 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
 from app.domain import MAX_DISCOUNT_BPS
-from app.models import Outcome, Status
+from app.models import Outcome, Role, Status
 
 Text = Annotated[str, Field(min_length=1, max_length=1000)]
 DiscountBps = Annotated[StrictInt, Field(ge=1, le=MAX_DISCOUNT_BPS)]
@@ -67,6 +67,22 @@ class RequestDetail(Output):
     created_at: datetime
     updated_at: datetime
     revisions: list[RevisionOutput]
+
+
+class RequestSummary(BaseModel):
+    id: str
+    application_id: str
+    status: Status
+    version: int
+    created_by: str
+    current_discount_bps: int
+    updated_at: datetime
+
+
+class UserSummary(BaseModel):
+    id: str
+    name: str
+    roles: list[Role]
 
 
 class ApprovedDiscount(BaseModel):

@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, Header
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_read_session, get_write_session
 from app.domain import Actor, create_request, decide, require_role, revise
@@ -37,7 +37,9 @@ from app.schemas import (
     CreateRequestInput,
     DecisionInput,
     RequestDetail,
+    RequestSummary,
     RevisionInput,
+    UserSummary,
 )
 
 MAX_IDEMPOTENCY_KEY_LENGTH = 255
@@ -154,6 +156,27 @@ def create_exception_request(
     return JSONResponse(status_code=201, content=response_body)
 
 
+@router.get("/requests")
+def list_requests(session: ReadSession, _caller: ReadActor) -> list[RequestSummary]:
+    requests = session.scalars(
+        select(ExceptionRequest)
+        .options(selectinload(ExceptionRequest.revisions))
+        .order_by(ExceptionRequest.updated_at.desc(), ExceptionRequest.id)
+    )
+    return [
+        RequestSummary(
+            id=request.id,
+            application_id=request.application_id,
+            status=request.status,
+            version=request.version,
+            created_by=request.created_by,
+            current_discount_bps=request.revisions[-1].discount_bps,
+            updated_at=request.updated_at,
+        )
+        for request in requests
+    ]
+
+
 @router.get("/requests/{request_id}")
 def get_exception_request(
     request_id: uuid.UUID, session: ReadSession, _caller: ReadActor
@@ -230,3 +253,13 @@ def get_approved_discount(
         decided_by=approved.decision.decided_by,
         decided_at=approved.decision.decided_at,
     )
+
+
+@router.get("/users")
+def list_users(session: ReadSession) -> list[UserSummary]:
+    # No caller: the UI reads this list to choose who to act as.
+    users = session.scalars(select(User).options(selectinload(User.roles)).order_by(User.id))
+    return [
+        UserSummary(id=user.id, name=user.name, roles=sorted(r.role for r in user.roles))
+        for user in users
+    ]

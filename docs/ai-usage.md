@@ -63,6 +63,7 @@ Pull requests describe the change only. This log records what the agents did, wh
 - Two different mutants failed exactly the same tests. The builder distrusted the match: Python had reused cached bytecode from the previous mutant. Each run now gets its own cache. [#9]
 - In a one-off script outside the repository, the same race between a revision and an approval under three transaction setups. With the driver's defaults both succeeded: the request was stored as `APPROVED` while its latest revision, at 35 bps, had no decision, and the approval sat on the earlier revision. The downstream read then failed with a 500. The builder first claimed the mortgage process would read the unapproved discount; a reviewer checked the code path and corrected it. With `BEGIN DEFERRED` the data stayed correct but the losing caller got a 500. With `BEGIN IMMEDIATE` it gets `409 STALE_VERSION`. The API concurrency test fails under the first two. [#16]
 - Invariant guard, first run: Claude Sonnet 5.5 wrote tests that caught the stale-approval mutant in 4 of 4 cases, checked by an LLM-free harness and confirmed by me. In review, a second agent showed that the harness itself could report false catches; those cases are now part of its calibration. Limits are recorded with the [run](../guard/runs/2026-10-03-stale-approval/result.md). [#10]
+- Hand mutants for the two list endpoints, in a one-off script outside the repository: eight of nine failed a test (no ordering, oldest first, no tie-break on `id`, tie-break reversed, discount of the first revision, list of requests without a caller, list of users needing a caller, users in another order). The ninth, roles left unsorted, cannot be observed: the primary key already returns a user's roles in alphabetical order. The tie-break test uses random ids, so its mutant can pass by chance in 1 of 24 runs; correct code never fails it. [#17]
 
 ### I decide rules and scope
 
@@ -70,6 +71,7 @@ Pull requests describe the change only. This log records what the agents did, wh
 - I made a comment mandatory for approvals as well as declines, and proposed a minimum of 20 characters. The builder argued against the minimum: it does not ensure quality, and 20 is arbitrary. I dropped it. [#13]
 - Before merging the first API slice I ran a smoke script against the service in Docker: create, replay, stale retry, the downstream read and four-eyes. 10 of 10 checks passed. [#13]
 - Before merging revise I ran the extended smoke script: a reset inside Docker, then 35 bps declined, revised to 20, a stale retry, a revise by another manager, the approval, and the downstream read of revision 2 at 20 bps. 20 of 20 checks passed. [#16]
+- Before merging the list endpoints I ran the smoke script again, extended with the list of requests after the full story, the same list without a caller, and the list of users without a caller. 23 of 23 checks passed. [#17]
 
 ## What I learned so far
 
@@ -87,3 +89,4 @@ Pull requests describe the change only. This log records what the agents did, wh
 [#12]: https://github.com/furkankuscu08/blue_harvest/pull/12
 [#13]: https://github.com/furkankuscu08/blue_harvest/pull/13
 [#16]: https://github.com/furkankuscu08/blue_harvest/pull/16
+[#17]: https://github.com/furkankuscu08/blue_harvest/pull/17
