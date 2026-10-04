@@ -36,6 +36,8 @@ jobs:
         run: docker compose up -d --build --wait --wait-timeout 60
       - name: Call the health endpoint
         run: curl -sf http://localhost:8000/health
+      - name: Fetch the UI page
+        run: curl -sf -o /dev/null http://localhost:8000/
       - name: Show logs on failure
         if: failure()
         run: docker compose logs
