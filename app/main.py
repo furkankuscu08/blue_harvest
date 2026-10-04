@@ -3,7 +3,11 @@
 Run with: uvicorn app.main:create_app --factory
 """
 
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api import router
 from app.config import Settings
@@ -11,6 +15,8 @@ from app.db import create_db_engine, read_session_factory, write_session_factory
 from app.errors import install_error_handlers
 from app.models import Base
 from app.seed import seed_if_empty
+
+STATIC = Path(__file__).parent / "static"
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -27,4 +33,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     install_error_handlers(app)
     app.include_router(router)
+
+    # The UI: one page and its files. Mounted under /static, not at the root,
+    # so that unknown routes keep the framework's answer.
+    @app.get("/", include_in_schema=False)
+    def ui() -> FileResponse:
+        return FileResponse(STATIC / "index.html")
+
+    app.mount("/static", StaticFiles(directory=STATIC), name="static")
     return app

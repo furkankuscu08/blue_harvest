@@ -10,6 +10,7 @@ A small service for mortgage pricing exception requests: a relationship manager 
 - `docs/assumptions-and-scope.md`: what the assignment states, what we assumed, what is out of scope.
 - `docs/state-model.md`: statuses, transitions and invariants I1 to I11.
 - `docs/api-contract.md`: endpoints, error codes, order of checks, retry behaviour, seed data.
+- `docs/ui-design.md`: how the browser UI behaves: screens, actions, reading, submitting, errors.
 - `docs/plan.md`: the current working plan: schedule, standing rules and time log. It does not define behaviour; the documents above do.
 
 Implement and fix code against these sources of truth.
@@ -18,7 +19,7 @@ Implement and fix code against these sources of truth.
 
 | Path | What is there |
 |---|---|
-| `app/` | The service: `api` (endpoints), `domain` (business rules), `models` (tables), `schemas` (JSON shapes), `db` (sessions and SQLite settings), `seed`, `errors`, `config`, `main` |
+| `app/` | The service: `api` (endpoints), `domain` (business rules), `models` (tables), `schemas` (JSON shapes), `db` (sessions and SQLite settings), `seed`, `errors`, `config`, `main`; `static/` is the browser UI |
 | `tests/` | Domain, API, concurrency and end-to-end tests; `helpers.py` holds the API calls tests share |
 | `docs/` | The sources of truth above and `ai-usage.md`, the log of how AI output was checked |
 | `guard/` | The invariant guard experiment: mutants, the LLM-free harness and recorded runs. See `guard/README.md` |
@@ -41,6 +42,7 @@ Implement and fix code against these sources of truth.
 - A new test guards against a concrete wrong behaviour; name that behaviour.
 - Test names describe behaviour, for example `test_stale_version_cannot_approve`.
 - Write code that reads like the code around it. Add an abstraction only when a second use exists.
+- The UI in `app/static/` uses only the public API. It has no build step and loads nothing from outside the repository.
 - No secrets, tokens or real customer data anywhere in the repository.
 - Repository content is in English.
 - Report what you ran and what you did not. Never describe a check as done when it was not run.
