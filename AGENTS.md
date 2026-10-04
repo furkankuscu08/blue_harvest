@@ -9,7 +9,7 @@ A small service for mortgage pricing exception requests: a relationship manager 
 - `docs/state-model.md`: statuses, transitions and invariants I1 to I11.
 - `docs/api-contract.md`: endpoints, error codes, order of checks, retry behaviour, seed data.
 - `docs/assumptions-and-scope.md`: what the assignment states, what we assumed, what is out of scope.
-- `docs/plan.md`: the frozen working plan. Where it disagrees with the documents above, they win (for example, `NOT_PENDING` is now `INVALID_STATE`).
+- `docs/plan.md`: the current working plan: schedule, standing rules and time log. It does not define behaviour; the documents above do.
 
 Implement and fix code against these sources of truth. If the documents conflict with each other, or a fix would require changing the agreed behaviour, stop and ask.
 
