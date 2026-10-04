@@ -244,7 +244,7 @@ The values come from the approved revision and its decision.
 [ { "id": "dave", "name": "Dave", "roles": ["RELATIONSHIP_MANAGER", "REVIEWER"] } ]
 ```
 
-Both are plain lists with no filtering or pagination. They exist so that the UI and a reviewer of this exercise read seed data from one place.
+Both are plain lists with no filtering or pagination, ordered by `id`; a user's roles are in alphabetical order. They exist so that the UI and a reviewer of this exercise read seed data from one place.
 
 ## Health
 

@@ -14,12 +14,13 @@ REVISION = {"expected_version": 1, "discount_bps": 30, "reason": "Second competi
 @pytest.mark.parametrize(
     ("method", "path", "body"),
     [
+        ("GET", "/requests", None),
         ("GET", f"/requests/{ANY_ID}", None),
         ("POST", f"/requests/{ANY_ID}/revisions", REVISION),
         ("POST", f"/requests/{ANY_ID}/decisions", DECISION),
         ("GET", "/applications/APP-1004/approved-discount", None),
     ],
-    ids=["detail", "revise", "decide", "approved-discount"],
+    ids=["list", "detail", "revise", "decide", "approved-discount"],
 )
 @pytest.mark.parametrize(
     "headers",
