@@ -19,7 +19,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from harness import CONFIG, GUARD, agent_changes
+from harness import GUARD, agent_changes, mutant_config
 
 MODEL = "claude-sonnet-5-5"
 TIMEOUT_SECONDS = 900
@@ -40,6 +40,8 @@ def command(prompt: str) -> list[str]:
 
 def main() -> int:
     mutant, workspace, run_dir = sys.argv[1], Path(sys.argv[2]).resolve(), Path(sys.argv[3])
+    # Read before the agent runs: a mistake in mutants.toml must not cost a paid run.
+    baseline = mutant_config(mutant)["baseline"]
     if run_dir.exists():
         print(f"{run_dir} already exists.")
         return 1
@@ -67,7 +69,7 @@ def main() -> int:
     shown = command("<contents of prompt.md>")
     record = {
         "mutant": mutant,
-        "baseline": CONFIG["baseline"],
+        "baseline": baseline,
         "model": MODEL,
         "claude_code": version.strip(),
         "started_at": started.isoformat(timespec="seconds"),

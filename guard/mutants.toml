@@ -1,16 +1,29 @@
 # Mutants for the invariant guard experiment.
 #
-# baseline: the commit every run starts from, so results do not depend on the working tree.
+# baseline: the commit every run of a mutant starts from, so the code under test does not
+# depend on the working tree. Each mutant has its own, so a recorded run can be checked
+# again against the code it was made on.
 # reference_tests: test functions that catch the mutant. They stay in the project's own
 # suite and are removed only from the agent's experiment copy, so the agent has a gap to fill.
 
-baseline = "229ad61ba927f694d599d81b75f07b9aa3fff492"
-
 [mutants.stale_approval]
+baseline = "229ad61ba927f694d599d81b75f07b9aa3fff492"
 patch = "mutants/stale_approval.patch"
 rule = "I3, I5: a decision needs the current version."
 breaks = "A reviewer can approve a revision they never saw."
 reference_tests = [
     "test_stale_version_cannot_approve",
     "test_stale_version_is_reported_before_invalid_state",
+]
+
+[mutants.idempotent_replay]
+baseline = "33dd38a683e366bff90c131df7fee338b064aecf"
+patch = "mutants/idempotent_replay.patch"
+rule = "I10: a create sent again with the same key and fields returns the stored first response."
+breaks = "A retry of a create that was stored is answered with REQUEST_ALREADY_EXISTS."
+reference_tests = [
+    "test_same_key_and_fields_replays_the_original_response",
+    "test_replay_returns_the_original_response_after_the_request_changed",
+    "test_whitespace_around_reason_does_not_change_the_payload",
+    "test_idempotency_key_is_scoped_to_the_caller",
 ]

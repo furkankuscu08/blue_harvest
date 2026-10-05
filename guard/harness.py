@@ -19,7 +19,7 @@
     python guard/harness.py replay <mutant> <run-dir>
         Run verify on the tests recorded by guard/generate.py, without an LLM.
 
-Every run uses a fresh export of the baseline commit, so no stale file or
+Every run uses a fresh export of the mutant's baseline commit, so no stale file or
 bytecode from an earlier run can leak in. Tests run in a container with no
 network, a read-only file system, limited resources and a time limit.
 """
@@ -60,6 +60,10 @@ HIDDEN_FROM_AGENT = [
     # The assignment text: its bonus section describes this experiment, and the rules
     # the agent needs are already in docs/state-model.md and docs/api-contract.md.
     "docs/Blue Harvest Agentic SDLC Engineering Assignment.md",
+    # The smoke script repeats checks of the test suite in bash, so a withheld test
+    # could still be read there. The demo script says which checks exist.
+    "scripts",
+    "docs/demo-script.md",
 ]
 
 # A failure on the mutant counts as caught only if it comes from an assertion.
@@ -69,10 +73,11 @@ ASSERTION_PREFIXES = ("AssertionError", "assert ", "Failed: DID NOT RAISE")
 # Trees
 
 
-def export_baseline(dest: Path) -> Path:
+def export_baseline(mutant: str, dest: Path) -> Path:
     dest.mkdir(parents=True)
+    baseline = mutant_config(mutant)["baseline"]
     archive = subprocess.run(
-        ["git", "-C", str(ROOT), "archive", CONFIG["baseline"]], capture_output=True, check=True
+        ["git", "-C", str(ROOT), "archive", baseline], capture_output=True, check=True
     )
     subprocess.run(["tar", "-x", "-C", str(dest)], input=archive.stdout, check=True)
     return dest
@@ -85,7 +90,7 @@ def apply_mutant(tree: Path, mutant: str) -> None:
 
 def build_workspace(mutant: str, dest: Path) -> Path:
     """The experiment copy the agent works in."""
-    export_baseline(dest)
+    export_baseline(mutant, dest)
     for name in HIDDEN_FROM_AGENT:
         path = dest / name
         if path.is_dir():
@@ -195,8 +200,8 @@ def classify(baseline: tuple, mutant: tuple) -> str:
 
 def prove(mutant: str) -> int:
     with tempfile.TemporaryDirectory(prefix="guard-") as tmp:
-        baseline = run_tests(export_baseline(Path(tmp) / "baseline"), ["tests"])
-        mutated = export_baseline(Path(tmp) / "mutant")
+        baseline = run_tests(export_baseline(mutant, Path(tmp) / "baseline"), ["tests"])
+        mutated = export_baseline(mutant, Path(tmp) / "mutant")
         apply_mutant(mutated, mutant)
         on_mutant = run_tests(mutated, ["tests"])
 
@@ -335,6 +340,12 @@ def calibrate(mutant: str) -> int:
 
 def replay(mutant: str, run_dir: Path) -> list[tuple[str, str, str]]:
     record = json.loads((run_dir / "run.json").read_text())
+    # A recorded run is checked against the code it was made on, and nothing else.
+    expected = {"mutant": mutant, "baseline": mutant_config(mutant)["baseline"]}
+    recorded = {key: record[key] for key in expected}
+    if recorded != expected:
+        print(f"The run was recorded for {recorded}, but mutants.toml says {expected}.")
+        return []
     with tempfile.TemporaryDirectory(prefix="guard-") as tmp:
         workspace = build_workspace(mutant, Path(tmp) / "workspace")
         for test_file in sorted((run_dir / "tests").glob("*.py")):
