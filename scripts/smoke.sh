@@ -18,6 +18,11 @@ FAIL=0
 
 trap 'docker compose down -v >/dev/null 2>&1; rm -rf "$WORK"' EXIT
 docker compose down -v >/dev/null 2>&1
+# Our service is down now. Whatever still answers here would get the calls below
+# instead of it, for example a local uvicorn bound to 127.0.0.1.
+if curl -s --connect-timeout 2 --max-time 5 -o /dev/null "$BASE/health"; then
+    echo "Port $APP_PORT is already in use by something else. Stop it or set APP_PORT."; exit 1
+fi
 echo "Building and starting the service on port $APP_PORT..."
 if ! docker compose up --build -d --wait --wait-timeout 90 >"$WORK/compose" 2>&1; then
     echo "The service did not start."; tail -n 5 "$WORK/compose"; docker compose logs; exit 1

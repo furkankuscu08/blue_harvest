@@ -23,7 +23,7 @@ One stakeholder wants the relationship manager to be able to change the requeste
 
 Both needs are met up to the point of approval. Revisions are immutable, so the content a reviewer saw can never change underneath a decision. A reviewer acting on an outdated view is rejected and has to look at the current revision first. The need we do not meet is changing a discount after it has been approved; see section D.
 
-Details are in the ADR on the revision and decision model.
+Details are in `state-model.md`.
 
 ## C. Our assumptions
 
