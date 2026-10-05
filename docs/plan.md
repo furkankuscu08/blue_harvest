@@ -1,6 +1,6 @@
 # Working plan
 
-The current plan, last updated on 2026-10-05 after day 7. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
+The current plan, last updated on 2026-10-05 after day 8. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
 
 The plan covers how the work is organised. What the service does is defined in [state-model.md](state-model.md), [api-contract.md](api-contract.md) and [assumptions-and-scope.md](assumptions-and-scope.md); those documents win over this one.
 
@@ -21,7 +21,7 @@ SQLite rules: `PRAGMA foreign_keys=ON` and `busy_timeout` on every connection, W
 
 ## Schedule
 
-Days 1 to 7 are done; the API, the UI and the agent experiment are complete. Hours for days 8 to 10 are estimates.
+Days 1 to 8 are done; the API, the UI and the agent experiment are complete and the checklist is closed. Hours for days 9 and 10 are estimates.
 
 | Day | Hours | Outcome | Done when |
 |---|---|---|---|
@@ -32,11 +32,11 @@ Days 1 to 7 are done; the API, the UI and the agent experiment are complete. Hou
 | 5 | 3 | Revise, the full decline-revise-approve story, concurrency test at API level, list endpoints | Done |
 | 6 | 5 | UI and a draft of the demo script | Done |
 | 7 | 2 | Idempotent replay experiment | Done |
-| 8 | 2 | Issue list and checklist | The list is closed and a clean Docker run is confirmed |
+| 8 | 2 | Checklist | Done |
 | 9 | 3 | README, contract clean-up, recorded demo | Someone else can follow the story from the README alone |
 | 10 | 2 | Fresh-clone rehearsal, walkthrough rehearsal | The buffer is still there |
 
-Spent so far, including 4 hours of planning: 27 hours. Remaining estimate: 7 hours. Projected total: about 34 hours.
+Spent so far, including 4 hours of planning: 29 hours. Remaining estimate: 5 hours. Projected total: about 34 hours.
 
 ### Day 6: UI
 
@@ -66,13 +66,20 @@ The invariant guard is described in [guard/README.md](../guard/README.md): an ag
 
 ### Day 8: checklist
 
-Problems found on days 6 and 7 are written down as GitHub issues and fixed on day 8. Only what is on the list is fixed; new ideas go to the README as next steps.
+Only what is on the list is fixed; new ideas go to the README as next steps. No GitHub issues were written on days 6 and 7, so the list was these five items; what they found is below.
 
 1. `scripts/smoke.sh`, which starts from an empty volume and stops the service at the end.
 2. `docker compose up --build -d --wait`, then the written UI script from start to end, including the two-tab stale version.
 3. The error paths a user can reach in the UI, and a lost connection, each with a message the user can act on: validation, stale version, wrong role or owner, four-eyes. Errors only an API client can cause are covered by the API tests.
 4. A seed reset while the UI is open.
 5. Small open items: the ADR reference in `assumptions-and-scope.md`, and a consistency check in the API concurrency test (after the race, the request's status agrees with the decision on its latest revision), confirmed once against a build with broken locking.
+
+All five were run on 2026-10-05; the fixes are in pull request #23.
+
+- The smoke script passed with 23 checks. Its first run was answered by a local server on the same port and tested the wrong service; the script now stops when the port is already answered.
+- The UI steps were done by hand in a browser. Step 4 of the demo script now says that an approval needs a comment.
+- After a seed reset, a decision on a request that no longer exists shows "No request with this id." and the old screen stays open. Not fixed: the API has no delete, so only a reset causes it. It goes to the README as a next step.
+- The consistency check fails on the build with broken locking in the revise-and-approve case: the request is stored `APPROVED` while its latest revision has no decision.
 
 ### Day 9: README and documents
 
@@ -139,3 +146,4 @@ No new behaviour from day 9 on. Idempotent retry is proven at API level (an auto
 | 2026-10-04 | 3 | Day 5: revise, the full decline-revise-approve story, API concurrency and response-snapshot tests, list endpoints, smoke script moved into the repository, plan review |
 | 2026-10-05 | 5 | Day 6: the UI in two pull requests (read-only screens, then create, revise and decide with the stale version and retry rules), UI design document, draft of the demo script, browser checks by a second agent and by hand |
 | 2026-10-05 | 2 | Day 7: a baseline per mutant in the guard harness, the idempotent replay mutant, a review before the run, one recorded agent run with its result and limits |
+| 2026-10-05 | 2 | Day 8: the checklist (smoke script, the UI script and error paths by hand, a seed reset under an open UI), a consistency check in the concurrency test, a port check in the smoke script |
