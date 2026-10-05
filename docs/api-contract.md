@@ -2,7 +2,7 @@
 
 The HTTP interface of the pricing exception service. It follows the rules in [state-model.md](state-model.md) and the assumptions in [assumptions-and-scope.md](assumptions-and-scope.md).
 
-This is the design record. Once the service exists, the OpenAPI schema that FastAPI generates at `/docs` is the source of truth for field-level detail.
+For field-level detail, the OpenAPI schema that FastAPI generates at `/docs` is the source of truth.
 
 ## Conventions
 
@@ -56,16 +56,16 @@ A request id in the path that is not a valid UUID is a `422 VALIDATION_ERROR`. A
 
 | Check | Error |
 |---|---|
-| Caller is known | `401 UNKNOWN_USER` |
+| Caller is known: `X-User-Id` is present and names a seed user | `401 UNKNOWN_USER` |
 | Caller has a role that allows the action | `403 ROLE_NOT_ALLOWED` |
 | Idempotency key is valid (create only) | `400 INVALID_IDEMPOTENCY_KEY` |
-| Body is well-formed and follows the input rules | `422 VALIDATION_ERROR` |
+| Body is well-formed and follows the input rules: no missing or unknown field, no wrong type, no broken rule | `422 VALIDATION_ERROR` |
 
 **Business checks** look at stored data. Their order is guaranteed and is listed under each endpoint.
 
 ## Request detail
 
-Returned by `GET /requests/{id}` and by every successful create, revise and decide.
+Returned by every successful create, revise and decide, and by `GET /requests/{id}`, which answers `200` with it or `404 REQUEST_NOT_FOUND`.
 
 ```json
 {
@@ -82,30 +82,20 @@ Returned by `GET /requests/{id}` and by every successful create, revise and deci
       "discount_bps": 35,
       "reason": "Competing offer from another lender.",
       "created_at": "2026-10-05T09:00:00Z",
-      "decision": {
-        "outcome": "DECLINED",
-        "decided_by": "carol",
-        "decided_at": "2026-10-05T10:00:00Z",
-        "comment": "Above what the competing offer justifies."
-      }
+      "decision": { "outcome": "DECLINED", "decided_by": "carol", "decided_at": "2026-10-05T10:00:00Z", "comment": "Above what the competing offer justifies." }
     },
     {
       "number": 2,
       "discount_bps": 20,
       "reason": "Matches the competing offer.",
       "created_at": "2026-10-05T11:00:00Z",
-      "decision": {
-        "outcome": "APPROVED",
-        "decided_by": "carol",
-        "decided_at": "2026-10-05T11:30:00Z",
-        "comment": "Matches a documented competing offer."
-      }
+      "decision": { "outcome": "APPROVED", "decided_by": "carol", "decided_at": "2026-10-05T11:30:00Z", "comment": "Matches a documented competing offer." }
     }
   ]
 }
 ```
 
-History is part of the detail, not a separate endpoint. Each decision sits inside the revision it applies to; `decision` is `null` for a revision that has not been decided. The last entry in `revisions` is the current one.
+History is part of the detail, not a separate endpoint. Each decision sits inside the revision it applies to; `decision` is `null` for a revision that has not been decided. A decision's `outcome` is `APPROVED` or `DECLINED`; `PENDING` is a request status only. The last entry in `revisions` is the current one.
 
 Consistency guarantees:
 
@@ -143,25 +133,7 @@ Because check 1 comes before check 3, a retry of a successful create is never an
 
 Returns `200` with an array ordered by `updated_at` descending, then `id` ascending, so the order is the same on every call. No filtering or pagination.
 
-```json
-[
-  {
-    "id": "0b6f3c1e-8f0a-4c57-9d0e-2f6a4c1d9a11",
-    "application_id": "APP-1004",
-    "status": "APPROVED",
-    "version": 4,
-    "created_by": "alice",
-    "current_discount_bps": 20,
-    "updated_at": "2026-10-05T11:30:00Z"
-  }
-]
-```
-
-## Get a request
-
-`GET /requests/{id}`
-
-Returns `200` with the request detail, or `404 REQUEST_NOT_FOUND`.
+Each item has `id`, `application_id`, `status`, `version`, `created_by` and `updated_at` as in the request detail, and `current_discount_bps`, the discount of the latest revision.
 
 ## Revise a request
 
@@ -183,13 +155,9 @@ Returns `201` with the request detail: a new revision, status `PENDING`, version
 |---|---|
 | `expected_version` | Required. Positive whole number: the version the caller saw. |
 | `outcome` | Required. `APPROVED` or `DECLINED`. |
-| `comment` | Required and not blank, for both outcomes. At most 1000 characters. |
+| `comment` | Required and not blank, for both outcomes (assumption A9). At most 1000 characters. |
 
 Returns `201` with the request detail: a decision on the latest revision, status `APPROVED` or `DECLINED`, version increased by one.
-
-`outcome` uses the same two values in the request and in the stored decision. `PENDING` is a request status only, never an outcome.
-
-Every decision needs a comment: a decline tells the relationship manager what to change before resubmitting, and an approval records why the exception is justified. This is our assumption A9.
 
 ## Business checks for revise and decide
 
@@ -208,7 +176,7 @@ For a client this means: `STALE_VERSION` says "reload, you were looking at an ol
 
 `GET /applications/{id}/approved-discount`
 
-Only callers with the `MORTGAGE_PROCESS` role can use this endpoint. Internal users see the same information in the request detail.
+For the mortgage process only. Internal users see the same information in the request detail.
 
 Returns `200` when the application's request is `APPROVED`:
 
@@ -248,31 +216,7 @@ Both are plain lists with no filtering or pagination, ordered by `id`; a user's 
 
 ## Health
 
-`GET /health` runs a trivial database query.
-
-| Case | Response |
-|---|---|
-| Service and database are usable | `200` with `{"status": "ok"}` |
-| Database cannot be reached | `503 DATABASE_UNAVAILABLE` |
-
-## Error catalogue
-
-| Status | Code | Meaning |
-|---|---|---|
-| `400` | `INVALID_IDEMPOTENCY_KEY` | The key header is missing, empty or longer than 255 characters. |
-| `401` | `UNKNOWN_USER` | `X-User-Id` is missing or is not a seed user. |
-| `403` | `ROLE_NOT_ALLOWED` | The caller's roles do not allow this action. |
-| `403` | `NOT_REQUEST_OWNER` | Only the creator can revise a request. |
-| `403` | `FOUR_EYES_VIOLATION` | The creator cannot decide on their own request. |
-| `404` | `REQUEST_NOT_FOUND` | No request with this id. |
-| `404` | `APPLICATION_NOT_FOUND` | No application with this id. |
-| `404` | `NO_APPROVED_DISCOUNT` | The application has no approved request. |
-| `409` | `REQUEST_ALREADY_EXISTS` | The application already has a request. `details.request_id` identifies it. |
-| `409` | `STALE_VERSION` | The request changed since the caller loaded it. |
-| `409` | `INVALID_STATE` | The current status does not allow this action. |
-| `422` | `VALIDATION_ERROR` | The body is malformed, a field is missing or of the wrong type, an unknown field was sent, or a rule is broken. |
-| `422` | `IDEMPOTENCY_KEY_REUSED` | The key was already used with different fields. |
-| `503` | `DATABASE_UNAVAILABLE` | The health check could not reach the database. |
+`GET /health` runs a trivial database query. It returns `200` with `{"status": "ok"}`, or `503 DATABASE_UNAVAILABLE` when the database cannot be reached.
 
 ## Retry behaviour
 
@@ -310,5 +254,3 @@ Applications:
 Seeding goes through the same create, revise and decide logic as the API (not over HTTP), so seed data cannot break a domain rule and every seeded history is a state that real operations can reach.
 
 Seeding runs only when the database is empty. A documented reset command empties the database and seeds it again, in one transaction, so it can run while the service is up.
-
-A seed test checks two things: each application ends in the expected status, revision and version; and running the seed a second time adds no rows.
