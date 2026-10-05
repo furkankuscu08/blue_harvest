@@ -1,6 +1,6 @@
 # Working plan
 
-The current plan, last updated on 2026-10-05 after day 6. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
+The current plan, last updated on 2026-10-05 after day 7. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
 
 The plan covers how the work is organised. What the service does is defined in [state-model.md](state-model.md), [api-contract.md](api-contract.md) and [assumptions-and-scope.md](assumptions-and-scope.md); those documents win over this one.
 
@@ -21,7 +21,7 @@ SQLite rules: `PRAGMA foreign_keys=ON` and `busy_timeout` on every connection, W
 
 ## Schedule
 
-Days 1 to 6 are done; the API and the UI are complete. Hours for days 7 to 10 are estimates.
+Days 1 to 7 are done; the API, the UI and the agent experiment are complete. Hours for days 8 to 10 are estimates.
 
 | Day | Hours | Outcome | Done when |
 |---|---|---|---|
@@ -31,12 +31,12 @@ Days 1 to 6 are done; the API and the UI are complete. Hours for days 7 to 10 ar
 | 4 | 3 | Identity, errors, seed and reset, create with idempotency, get, decide, approved discount | Done |
 | 5 | 3 | Revise, the full decline-revise-approve story, concurrency test at API level, list endpoints | Done |
 | 6 | 5 | UI and a draft of the demo script | Done |
-| 7 | 3 | Idempotent replay experiment | The result is recorded and can be verified without an LLM |
+| 7 | 2 | Idempotent replay experiment | Done |
 | 8 | 2 | Issue list and checklist | The list is closed and a clean Docker run is confirmed |
 | 9 | 3 | README, contract clean-up, recorded demo | Someone else can follow the story from the README alone |
 | 10 | 2 | Fresh-clone rehearsal, walkthrough rehearsal | The buffer is still there |
 
-Spent so far, including 4 hours of planning: 25 hours. Remaining estimate: 10 hours. Projected total: about 35 hours.
+Spent so far, including 4 hours of planning: 27 hours. Remaining estimate: 7 hours. Projected total: about 34 hours.
 
 ### Day 6: UI
 
@@ -53,7 +53,7 @@ The demo script for the UI is drafted while the UI is built: create, decline, re
 
 ### Day 7: agent experiment
 
-The invariant guard is described in [guard/README.md](../guard/README.md): an agent writes regression tests against a deliberately broken rule (a mutant), and an LLM-free harness checks whether those tests catch it. The first run, stale approval, is recorded.
+The invariant guard is described in [guard/README.md](../guard/README.md): an agent writes regression tests against a deliberately broken rule (a mutant), and an LLM-free harness checks whether those tests catch it. Both runs are recorded: stale approval, and idempotent replay with two tests that caught the mutant and one that missed it.
 
 - The second experiment is idempotent replay broken: the same key and content does not return the first response. The unique constraint still prevents a second row, so the visible failure is a `409`.
 - One mutant, a neutral prompt and at most two generation runs. The result is recorded as it comes out; the prompt is not tuned until it succeeds.
@@ -138,3 +138,4 @@ No new behaviour from day 9 on. Idempotent retry is proven at API level (an auto
 | 2026-10-04 | 3 | Day 4: first API slice (identity, errors, seed and reset, create with idempotency, decide, approved discount, first end-to-end test), two test review rounds, AI usage log restructured |
 | 2026-10-04 | 3 | Day 5: revise, the full decline-revise-approve story, API concurrency and response-snapshot tests, list endpoints, smoke script moved into the repository, plan review |
 | 2026-10-05 | 5 | Day 6: the UI in two pull requests (read-only screens, then create, revise and decide with the stale version and retry rules), UI design document, draft of the demo script, browser checks by a second agent and by hand |
+| 2026-10-05 | 2 | Day 7: a baseline per mutant in the guard harness, the idempotent replay mutant, a review before the run, one recorded agent run with its result and limits |

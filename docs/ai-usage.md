@@ -9,8 +9,11 @@ How AI agents contributed to this work, and how their output was checked. Update
 | Builder | Claude Code, Claude Opus 5.5 | Plans, documents, tests and code. |
 | Reviewer | opencode, GPT 6 Astra | Independent review of plans, tests and code. |
 | Reviewer | opencode, Qwen 3.8 Max | Independent review of plans, tests and code. |
+| Reviewer | Cursor, Grok 4.7 | Independent review of pull requests, from [#21] on. |
 | Guard agent | Claude Code, Claude Sonnet 5.5, restricted permissions | Writes tests against a planted defect in the [invariant guard](../guard/README.md) experiment. |
 | Decision maker | Me | Every decision. Nothing is merged without my review. |
+
+Which reviewer looks at a change, and how many rounds it gets, is my decision for each task, by how complex it is. No automatic process chooses.
 
 ## How output is checked
 
