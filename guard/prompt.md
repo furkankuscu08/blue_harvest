@@ -13,9 +13,9 @@ Do this:
 Each test you write must:
 
 - pass on the code as it is now, and fail once `pr.diff` is applied;
-- test behaviour through the public functions in `app/`, not by reading source text;
+- test behaviour through the public API or the public functions in `app/`, not by reading source text;
 - be deterministic: no sleeps, no network, no reliance on timing;
-- have a name that states the rule, for example `test_stale_version_cannot_revise`.
+- have a name that states the rule it protects, as the existing tests do.
 
 Rules:
 
