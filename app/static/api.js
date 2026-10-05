@@ -48,3 +48,23 @@ export const getRequest = (user, requestId) => call("GET", `/requests/${id(reque
 export const getApplications = (user) => call("GET", "/applications", { user });
 export const getApprovedDiscount = (user, applicationId) =>
   call("GET", `/applications/${id(applicationId)}/approved-discount`, { user });
+
+// A successful create, revise or decide answers with the request. A success
+// without one does not say what was stored, so it is not a definite answer.
+const isRequest = (data) =>
+  typeof data?.id === "string" &&
+  Number.isInteger(data.version) &&
+  Array.isArray(data.revisions) &&
+  data.revisions.length > 0;
+
+async function submit(path, options) {
+  const result = await call("POST", path, options);
+  return result.kind === "ok" && !isRequest(result.data) ? UNCERTAIN : result;
+}
+
+export const createRequest = (user, key, body) =>
+  submit("/requests", { user, body, headers: { "Idempotency-Key": key } });
+export const reviseRequest = (user, requestId, body) =>
+  submit(`/requests/${id(requestId)}/revisions`, { user, body });
+export const decideRequest = (user, requestId, body) =>
+  submit(`/requests/${id(requestId)}/decisions`, { user, body });

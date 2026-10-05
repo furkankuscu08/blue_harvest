@@ -17,6 +17,16 @@ from app.models import Base
 from app.seed import seed_if_empty
 
 STATIC = Path(__file__).parent / "static"
+# The browser asks before it reuses a UI file, so that after an update it
+# never runs a stored module next to newer ones.
+NO_CACHE = {"Cache-Control": "no-cache"}
+
+
+class UiFiles(StaticFiles):
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers.update(NO_CACHE)
+        return response
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -38,7 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # so that unknown routes keep the framework's answer.
     @app.get("/", include_in_schema=False)
     def ui() -> FileResponse:
-        return FileResponse(STATIC / "index.html")
+        return FileResponse(STATIC / "index.html", headers=NO_CACHE)
 
-    app.mount("/static", StaticFiles(directory=STATIC), name="static")
+    app.mount("/static", UiFiles(directory=STATIC), name="static")
     return app
