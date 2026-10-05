@@ -29,7 +29,7 @@ What `caught` means: the agent's test passes on the baseline and fails on the mu
 | Mutant | Rule | Baseline | Recorded run |
 |---|---|---|---|
 | `stale_approval` | I3, I5: a decision needs the current version | `229ad61`, the domain core | `runs/2026-10-03-stale-approval` |
-| `idempotent_replay` | I10: a create sent again with the same key and fields returns the first response | `33dd38a`, the complete API | none yet |
+| `idempotent_replay` | I10: a create sent again with the same key and fields returns the first response | `33dd38a`, the complete API | `runs/2026-10-05-idempotent-replay` |
 
 A run is an `invalid run` when the agent changed any existing file, when its file runs tests defined elsewhere (for example by importing them), when pytest does not end normally, or when it times out. `calibration/` covers the import, interrupted-run and collection-error cases; run `calibrate` after changing the harness.
 
