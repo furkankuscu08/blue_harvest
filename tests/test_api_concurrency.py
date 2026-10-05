@@ -84,6 +84,12 @@ def test_only_one_of_two_concurrent_changes_wins(client, monkeypatch, calls):
         thread.join(timeout=10)
 
     assert errors == []
+    # Whoever won, the stored status is the decision on the latest revision, or
+    # PENDING when that revision has none. Checked first, so that it is seen to
+    # fail by itself when both changes get through.
+    current = get(client, request_id).json()
+    decision = current["revisions"][-1]["decision"]
+    assert current["status"] == (decision["outcome"] if decision else "PENDING")
     assert sorted(r.status_code for r in responses) == [201, 409]
     [winner] = [r for r in responses if r.status_code == 201]
     [loser] = [r for r in responses if r.status_code == 409]

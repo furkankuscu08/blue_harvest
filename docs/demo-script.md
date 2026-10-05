@@ -18,7 +18,7 @@ Open `http://localhost:8000/`. With `APP_PORT` set, use that port.
 | 1 | Alice | Applications, "New request" on APP-1001: 35 bps, a reason | The new request opens: `Pending`, revision 1, version 1 |
 | 2 | Carol | Open APP-1001, comment, "Decline" | `Declined`, version 2; the comment is next to the current request |
 | 3 | Alice | Open APP-1001, "Revise": 20 bps, a new reason | `Pending`, revision 2, version 3 |
-| 4 | Carol, in two tabs | Open APP-1001 in both. Approve in the first tab | First tab: `Approved`, version 4 |
+| 4 | Carol, in two tabs | Open APP-1001 in both. In the first tab: comment, "Approve" | First tab: `Approved`, version 4 |
 | 5 | Carol, second tab | Type a comment, "Decline" | "This request changed while you were looking at it", the comment is still there and both buttons are closed |
 | 6 | Carol, second tab | "Reload" | `Approved`; the form is gone: "Approved requests cannot be changed." |
 | 7 | Mortgage process | Applications | APP-1001: 20 bps, revision 2, approved by Carol |
