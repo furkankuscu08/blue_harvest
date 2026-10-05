@@ -10,7 +10,7 @@ How the browser UI behaves and why. The UI is a client of the public API in [api
 | Screens | One HTML file with hash routes: `#/requests`, `#/requests/{id}`, `#/applications` | Every screen has an address, so the back button and a second tab work. |
 | Style | One hand-written stylesheet | No framework and no external source; the UI works offline. |
 | Forms | The browser's own form checks and the `<dialog>` element | Required fields, ranges, lengths and modal behaviour come for free. |
-| Serving | `GET /` returns the page; its files are under `/static/` | One address for the README. Unknown routes keep the framework's answer. |
+| Serving | `GET /` returns the page; its files are under `/static/`. All are sent with `Cache-Control: no-cache` | One address for the README. Unknown routes keep the framework's answer. The browser asks before it reuses a file, so after an update it does not run an old module next to new ones. |
 | Acting user | Kept per tab in `sessionStorage` | Two tabs can act as two different users. |
 
 Not chosen: server-rendered pages with HTMX (a new dependency and a second path next to the JSON API) and a framework with a build step (too much for three screens).

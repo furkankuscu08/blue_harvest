@@ -33,20 +33,20 @@ Open `http://localhost:8000/`. With `APP_PORT` set, use that port.
 
 ## A lost connection
 
-Use the browser's developer tools: Network, "Offline".
+Stop and start the service from a terminal: `docker compose stop app` and `docker compose start app`. This works the same in every browser; the "Offline" switch of the developer tools did not cut the calls in one run.
 
 | Step | Acting as | Do | Expect |
 |---|---|---|---|
-| 11 | Bob | Open APP-1003, "Revise", go offline, "Submit revision" | "We couldn't confirm the result", the draft is still there, the submit button is closed |
-| 12 | Bob | Go online, "Reload" | The current request; the draft is back and can be submitted |
-| 13 | Alice | Reset the seed first. "New request" on APP-1001, go offline, "Submit request" | Only "Retry" is offered; Escape does not close the dialog |
-| 14 | Alice | Go online, "Retry" | The new request opens |
+| 11 | Bob | Open APP-1003, "Revise", stop the service, "Submit revision" | "We couldn't confirm the result", the draft is still there, the submit button is closed |
+| 12 | Bob | Start the service, "Reload" | The current request; the draft is back and can be submitted |
+| 13 | Alice | Reset the seed first. "New request" on APP-1001, stop the service, "Submit request" | Only "Retry" is offered; Escape does not close the dialog |
+| 14 | Alice | Start the service, "Retry" | The new request opens |
 
-Steps 11 to 14 check the messages and the buttons. They do not prove that a create which was stored, and whose answer was lost, is replayed: offline, the request never reaches the service. The API tests and `scripts/smoke.sh` prove the replay.
+Steps 11 to 14 check the messages and the buttons. They do not prove that a create which was stored, and whose answer was lost, is replayed: the request never reaches the stopped service. The API tests and `scripts/smoke.sh` prove the replay.
 
 ## Keyboard and a narrow window
 
 | Step | Do | Expect |
 |---|---|---|
-| 15 | Reset the seed, then repeat step 1 with the keyboard only | Every control can be reached with Tab; the focus is visible |
+| 15 | Reset the seed, then repeat step 1 with a real keyboard only | Every control can be reached with Tab; the focus is visible. A browser draws the focus ring for the keyboard, not after a mouse click |
 | 16 | Make the window narrow and open a request | One column; nothing is cut off |

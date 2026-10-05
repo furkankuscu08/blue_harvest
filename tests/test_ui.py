@@ -41,6 +41,15 @@ def test_the_page_and_its_modules_refer_to_the_files_that_exist():
     assert referred == {path.name for path in STATIC.iterdir()} - {"index.html"}
 
 
+def test_the_browser_asks_again_before_it_reuses_a_ui_file(client):
+    # Without this a browser may run a stored module next to newer ones after an update.
+    files = [path.name for path in STATIC.iterdir() if path.name != "index.html"]
+    paths = ["/"] + [f"/static/{name}" for name in files]
+
+    for path in paths:
+        assert client.get(path).headers.get("cache-control") == "no-cache", path
+
+
 @pytest.mark.parametrize("method", ["GET", "POST"])
 def test_unknown_route_keeps_the_framework_answer(client, method):
     response = client.request(method, "/no-such-page")
