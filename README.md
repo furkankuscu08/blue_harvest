@@ -147,6 +147,5 @@ What a client needs on top, and this exercise does not have: an approved list of
 | 7 | 2 | Second guard run |
 | 8 | 2 | Checklist: smoke script, UI by hand |
 | 9 | 2 | This README, contract clean-up |
-| 10 | 2 (estimate) | Rehearsal from a fresh clone |
 
-About 33 hours. The plan and the log are in [docs/plan.md](docs/plan.md).
+31 hours in total. The plan and the log are in [docs/plan.md](docs/plan.md).

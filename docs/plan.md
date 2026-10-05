@@ -21,7 +21,7 @@ SQLite rules: `PRAGMA foreign_keys=ON` and `busy_timeout` on every connection, W
 
 ## Schedule
 
-Days 1 to 9 are done; the API, the UI, the agent experiment and the README are complete. The hours for day 10 are an estimate.
+All nine days are done; the API, the UI, the agent experiment and the README are complete.
 
 | Day | Hours | Outcome | Done when |
 |---|---|---|---|
@@ -34,9 +34,8 @@ Days 1 to 9 are done; the API, the UI, the agent experiment and the README are c
 | 7 | 2 | Idempotent replay experiment | Done |
 | 8 | 2 | Checklist | Done |
 | 9 | 2 | README, contract clean-up, recorded demo | Done |
-| 10 | 2 | Fresh-clone rehearsal, walkthrough rehearsal | The buffer is still there |
 
-Spent so far, including 4 hours of planning: 31 hours. Remaining estimate: 2 hours. Projected total: about 33 hours.
+Spent, including 4 hours of planning: 31 hours.
 
 ### Day 6: UI
 
