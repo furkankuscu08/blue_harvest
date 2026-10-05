@@ -29,7 +29,7 @@ Not chosen: server-rendered pages with HTMX (a new dependency and a second path 
 
 **Request detail**: the current discount and reason and the action panel are at the top, so a reviewer decides with the reason in view. The history follows: every revision with its decision directly below it.
 
-**Applications**: every application with its request, or "New request" for a relationship manager when there is none. For the mortgage process each row shows the approved discount, read from the approved-discount endpoint and not derived from the list. Only `NO_APPROVED_DISCOUNT` is shown as "No approved discount"; any other failure is shown as "Could not be read".
+**Applications**: every application with its request, or "New request" for a relationship manager when there is none. For the mortgage process each row shows the approved discount, read from the approved-discount endpoint and not derived from the list. Only `NO_APPROVED_DISCOUNT` is shown as "No approved discount"; any other failure is shown as "Could not be read". Choosing the mortgage process as the acting user opens this screen, from wherever the user was.
 
 A discount is shown in basis points, for example `25 bps`.
 

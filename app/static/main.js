@@ -294,9 +294,9 @@ dialog.addEventListener("close", () => {
 
 select.addEventListener("change", () => {
   setUser(select.value);
-  // The mortgage process has nothing to do on the requests screen.
-  const onRequests = route().screen === "requests";
-  if (user?.roles.includes("MORTGAGE_PROCESS") && onRequests) location.hash = "#/applications";
+  // The mortgage process reads approved discounts, and those are on Applications.
+  const elsewhere = route().screen !== "applications";
+  if (user?.roles.includes("MORTGAGE_PROCESS") && elsewhere) location.hash = "#/applications";
   else show();
 });
 
