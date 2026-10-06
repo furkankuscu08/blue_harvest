@@ -1,6 +1,6 @@
 # Working plan
 
-The current plan, last updated on 2026-10-05 after day 8. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
+The current plan, last updated on 2026-10-05 after day 9. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
 
 The plan covers how the work is organised. What the service does is defined in [state-model.md](state-model.md), [api-contract.md](api-contract.md) and [assumptions-and-scope.md](assumptions-and-scope.md); those documents win over this one.
 
@@ -21,7 +21,7 @@ SQLite rules: `PRAGMA foreign_keys=ON` and `busy_timeout` on every connection, W
 
 ## Schedule
 
-Days 1 to 8 are done; the API, the UI and the agent experiment are complete and the checklist is closed. Hours for days 9 and 10 are estimates.
+All nine days are done; the API, the UI, the agent experiment and the README are complete.
 
 | Day | Hours | Outcome | Done when |
 |---|---|---|---|
@@ -33,10 +33,9 @@ Days 1 to 8 are done; the API, the UI and the agent experiment are complete and 
 | 6 | 5 | UI and a draft of the demo script | Done |
 | 7 | 2 | Idempotent replay experiment | Done |
 | 8 | 2 | Checklist | Done |
-| 9 | 3 | README, contract clean-up, recorded demo | Someone else can follow the story from the README alone |
-| 10 | 2 | Fresh-clone rehearsal, walkthrough rehearsal | The buffer is still there |
+| 9 | 2 | README, contract clean-up, recorded demo | Done |
 
-Spent so far, including 4 hours of planning: 29 hours. Remaining estimate: 5 hours. Projected total: about 34 hours.
+Spent, including 4 hours of planning: 31 hours.
 
 ### Day 6: UI
 
@@ -60,7 +59,7 @@ The invariant guard is described in [guard/README.md](../guard/README.md): an ag
 - The harness gets no new features. It changes only for a defect that makes its result unreliable. One exception: each mutant names its own baseline commit, because the first baseline has no API and the first recorded run must stay checkable against the code it was made on.
 - The agent's copy also leaves out `scripts/` and `docs/demo-script.md`: the smoke script repeats the withheld check in bash.
 - The prompt changes before the run, not after it: the example test name that hinted at the first mutant is gone, and a test may use the public API. A second generation run happens only if the first cannot be used for a reason outside the agent's judgement, such as a tool error or a timeout.
-- Controls: the agent may only add files under `tests/`, never merges, and is advisory only. Its tests run in a container with no secrets, no network and a time limit. CI stays the merge gate.
+- Controls: the agent may write only under `tests/`, never merges, and is advisory only; a run in which it changed an existing file is invalid. Its tests run in a container with no secrets, no network and a time limit. CI stays the merge gate.
 - Residual risks, for the README: missed rules, false alarms, tests that pass for the wrong reason, prompt injection through diff content.
 - It is a controlled experiment on deliberately created test gaps and is reported as such: two examples are evidence for two scenarios, not a general success rate.
 
@@ -87,8 +86,15 @@ All five were run on 2026-10-05; the fixes are in pull request #23.
 - Deliberate assumptions, labelled as ours; real time spent; a short "with more time" section; what changes in production, including PostgreSQL.
 - One traceability table that starts from the requirements R1 to R6: requirement, behaviour, test or run evidence, with the related invariants in the same row.
 - How this way of working carries over to a regulated client.
-- `api-contract.md` loses its repetitions, to about 200 lines. The order of checks and the retry rules stay.
+- `api-contract.md` loses its repetitions, to about 250 lines. The order of checks and the retry rules stay.
 - The demo script is run and the result recorded.
+
+Done on 2026-10-05, in pull requests #25 and #26.
+
+- The contract went from 314 to about 250 lines. Fewer would have meant cutting rules, not repetition.
+- The README's table has a seventh row, for the stakeholder decision.
+- The README was reviewed twice against the repository; what the reviews found is in `ai-usage.md`.
+- The demo script records the run by hand on 2026-10-05.
 
 No new behaviour from day 9 on. Idempotent retry is proven at API level (an automated test and a step in the smoke script); a lost response cannot be produced reliably by hand in a browser, and the README lists this as a known limit.
 
@@ -147,3 +153,4 @@ No new behaviour from day 9 on. Idempotent retry is proven at API level (an auto
 | 2026-10-05 | 5 | Day 6: the UI in two pull requests (read-only screens, then create, revise and decide with the stale version and retry rules), UI design document, draft of the demo script, browser checks by a second agent and by hand |
 | 2026-10-05 | 2 | Day 7: a baseline per mutant in the guard harness, the idempotent replay mutant, a review before the run, one recorded agent run with its result and limits |
 | 2026-10-05 | 2 | Day 8: the checklist (smoke script, the UI script and error paths by hand, a seed reset under an open UI), a consistency check in the concurrency test, a port check in the smoke script |
+| 2026-10-05 | 2 | Day 9: the API contract without its repetitions, the README with the traceability table, two review rounds of the README, the demo script result recorded |

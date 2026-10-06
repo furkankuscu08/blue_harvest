@@ -1,6 +1,6 @@
 # UI demo script
 
-The main story in the browser, with the checks that have no automated test. Draft: it is run and its result recorded on day 9.
+The main story in the browser, with the checks that have no automated test. Steps 1 to 16 were run by hand on 2026-10-05 in Google Chrome, against the service in Docker; every step gave the expected result.
 
 Start from the seed data:
 
