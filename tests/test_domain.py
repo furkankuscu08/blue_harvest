@@ -211,14 +211,33 @@ def test_stale_version_cannot_revise(expected_version):
     )
 
 
-def test_approved_request_cannot_be_revised():
+def test_stale_version_cannot_revise_approved_request():
     request = approved_request()
 
     assert_rejected_without_change(
         request,
-        ErrorCode.INVALID_STATE,
-        lambda: revise(request, ALICE, expected_version=2, discount_bps=20, reason="x", now=T2),
+        ErrorCode.STALE_VERSION,
+        lambda: revise(request, ALICE, expected_version=1, discount_bps=20, reason="x", now=T2),
     )
+
+
+def test_creator_revises_approved_request():
+    # A4: the negotiation can go on after an approval. I7: the approval is kept.
+    request = approved_request()
+    approval = request.revisions[0].decision
+    kept = (approval.outcome, approval.decided_by, approval.decided_at, approval.comment)
+
+    revise(request, ALICE, expected_version=2, discount_bps=40, reason="New offer.", now=T2)
+
+    assert (request.status, request.version, request.updated_at) == (Status.PENDING, 3, T2)
+    assert revision_contents(request) == [
+        (1, 35, "Competing offer.", T0),
+        (2, 40, "New offer.", T2),
+    ]
+    assert request.revisions[0].decision is approval
+    assert (approval.outcome, approval.decided_by, approval.decided_at, approval.comment) == kept
+    assert request.revisions[1].decision is None
+    assert_consistent(request)
 
 
 # Decide
@@ -357,14 +376,15 @@ def test_approved_request_cannot_be_decided_again(outcome):
     )
 
 
-# Order of checks: role, then relation to the request, then version, then state.
-# Each scenario is set up so that every later check would fail too.
+# Order of checks: role, then relation to the request, then version, then, for a
+# decision, state. A revise has no check on the state. Each scenario is set up so
+# that every later check would fail too.
 
 
 @pytest.mark.parametrize(
     "action",
     [
-        # carol is not a manager, not the owner, has a stale version, and the request is approved.
+        # carol is not a manager, not the owner, and has a stale version.
         lambda r: revise(r, CAROL, expected_version=1, discount_bps=20, reason="x", now=T2),
         # alice is not a reviewer, is the creator, has a stale version, and the request is approved.
         lambda r: decide(
@@ -408,20 +428,21 @@ def test_relation_is_checked_before_version_and_state(creator, action, expected_
     assert_rejected_without_change(request, expected_code, lambda: action(request))
 
 
-@pytest.mark.parametrize(
-    "action",
-    [
-        lambda r: revise(r, ALICE, expected_version=1, discount_bps=20, reason="x", now=T2),
-        lambda r: decide(
-            r, CAROL, expected_version=1, outcome=Outcome.APPROVED, comment="Fits policy.", now=T2
-        ),
-    ],
-    ids=["revise", "decide"],
-)
-def test_stale_version_is_reported_before_invalid_state(action):
+def test_stale_version_is_reported_before_invalid_state():
     request = approved_request()
 
-    assert_rejected_without_change(request, ErrorCode.STALE_VERSION, lambda: action(request))
+    assert_rejected_without_change(
+        request,
+        ErrorCode.STALE_VERSION,
+        lambda: decide(
+            request,
+            CAROL,
+            expected_version=1,
+            outcome=Outcome.APPROVED,
+            comment="Fits policy.",
+            now=T2,
+        ),
+    )
 
 
 # The worked example in docs/state-model.md

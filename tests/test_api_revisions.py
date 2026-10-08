@@ -163,16 +163,23 @@ def test_stale_version_cannot_revise(client):
     assert response.json()["code"] == "STALE_VERSION"
 
 
-def test_approved_request_cannot_be_revised(client):
-    # Seed: APP-1004 is APPROVED, created by alice.
+def test_creator_revises_an_approved_request(client):
+    # Seed: APP-1004 is APPROVED at 20 bps in revision 2, created by alice; version 4.
     request_id = request_id_for(client, "APP-1004")
+    before = get(client, request_id).json()
 
-    response = revise(
-        client, request_id, expected_version=current_version(client, request_id), **CHANGE
-    )
+    response = revise(client, request_id, expected_version=4, **CHANGE)
 
-    assert response.status_code == 409
-    assert response.json()["code"] == "INVALID_STATE"
+    assert response.status_code == 201
+    body = response.json()
+    assert (body["status"], body["version"]) == ("PENDING", 5)
+    # The earlier revisions and their decisions are kept as they were (I2, I7).
+    assert body["revisions"][:2] == before["revisions"]
+    third = body["revisions"][2]
+    assert (third["number"], third["discount_bps"], third["decision"]) == (3, 30, None)
+    # The approval of revision 2 stays in force (A10).
+    assert (body["approved_revision_number"], body["approved_discount_bps"]) == (2, 20)
+    assert get(client, request_id).json() == body
 
 
 @pytest.mark.parametrize(
