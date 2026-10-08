@@ -76,6 +76,8 @@ Returned by every successful create, revise and decide, and by `GET /requests/{i
   "created_by": "alice",
   "created_at": "2026-10-05T09:00:00Z",
   "updated_at": "2026-10-05T11:30:00Z",
+  "approved_revision_number": 2,
+  "approved_discount_bps": 20,
   "revisions": [
     {
       "number": 1,
@@ -96,6 +98,8 @@ Returned by every successful create, revise and decide, and by `GET /requests/{i
 ```
 
 History is part of the detail, not a separate endpoint. Each decision sits inside the revision it applies to; `decision` is `null` for a revision that has not been decided. A decision's `outcome` is `APPROVED` or `DECLINED`; `PENDING` is a request status only. The last entry in `revisions` is the current one.
+
+`status` describes the latest revision. `approved_revision_number` and `approved_discount_bps` describe the approval in force: the approved revision with the highest number. Both are `null` when no revision was approved. They can differ from the latest revision: a request that was approved at 20 bps and then revised to 30 bps is `PENDING`, with 20 bps still in force.
 
 Consistency guarantees:
 
@@ -133,7 +137,7 @@ Because check 1 comes before check 3, a retry of a successful create is never an
 
 Returns `200` with an array ordered by `updated_at` descending, then `id` ascending, so the order is the same on every call. No filtering or pagination.
 
-Each item has `id`, `application_id`, `status`, `version`, `created_by` and `updated_at` as in the request detail, and `current_discount_bps`, the discount of the latest revision.
+Each item has `id`, `application_id`, `status`, `version`, `created_by` and `updated_at` as in the request detail, `current_discount_bps`, the discount of the latest revision, and `approved_discount_bps`, the discount of the approval in force or `null`.
 
 ## Revise a request
 
@@ -145,7 +149,7 @@ Each item has `id`, `application_id`, `status`, `version`, `created_by` and `upd
 | `discount_bps` | Required. Whole number from 1 to 200 (assumption A5). |
 | `reason` | Required. Not blank, at most 1000 characters. |
 
-Returns `201` with the request detail: a new revision, status `PENDING`, version increased by one.
+Returns `201` with the request detail: a new revision, status `PENDING`, version increased by one. A revise is possible in every status. On an approved request it does not change the approval in force (assumption A10).
 
 ## Decide on a request
 
@@ -157,7 +161,7 @@ Returns `201` with the request detail: a new revision, status `PENDING`, version
 | `outcome` | Required. `APPROVED` or `DECLINED`. |
 | `comment` | Required and not blank, for both outcomes (assumption A9). At most 1000 characters. |
 
-Returns `201` with the request detail: a decision on the latest revision, status `APPROVED` or `DECLINED`, version increased by one.
+Returns `201` with the request detail: a decision on the latest revision, status `APPROVED` or `DECLINED`, version increased by one. An approval makes this revision the approval in force. A decline leaves an earlier approval in force.
 
 ## Business checks for revise and decide
 
@@ -168,9 +172,9 @@ In order, all inside one write transaction together with the change itself:
    - revise: caller created it, otherwise `403 NOT_REQUEST_OWNER`;
    - decide: caller did not create it, otherwise `403 FOUR_EYES_VIOLATION`.
 3. `expected_version` is the current version: `409 STALE_VERSION`.
-4. The current status allows the action: `409 INVALID_STATE`.
+4. Decide only: the request is `PENDING`, otherwise `409 INVALID_STATE`. A revise has no check on the status.
 
-For a client this means: `STALE_VERSION` says "reload, you were looking at an old state"; `INVALID_STATE` says "you saw the current state and this action is not possible in it". A stale version is always reported as `STALE_VERSION`, even when the current status would also forbid the action.
+For a client this means: `STALE_VERSION` says "reload, you were looking at an old state"; `INVALID_STATE` says "you saw the current state and a decision is not possible in it". A stale version is always reported as `STALE_VERSION`, even when the current status would also forbid the action.
 
 ## Approved discount
 
@@ -178,7 +182,7 @@ For a client this means: `STALE_VERSION` says "reload, you were looking at an ol
 
 For the mortgage process only. Internal users see the same information in the request detail.
 
-Returns `200` when the application's request is `APPROVED`:
+Returns `200` when the application's request has an approval in force, also while a later revision is pending or was declined:
 
 ```json
 {
@@ -191,12 +195,12 @@ Returns `200` when the application's request is `APPROVED`:
 }
 ```
 
-The values come from the approved revision and its decision.
+All values come from one revision, the approval in force, and its decision.
 
 | Case | Response |
 |---|---|
 | Application does not exist | `404 APPLICATION_NOT_FOUND` |
-| No request, or request is `PENDING` or `DECLINED` | `404 NO_APPROVED_DISCOUNT` |
+| No request, or no revision of it was approved | `404 NO_APPROVED_DISCOUNT` |
 
 ## Applications and users
 

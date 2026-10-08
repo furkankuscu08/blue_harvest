@@ -19,15 +19,15 @@ Not chosen: server-rendered pages with HTMX (a new dependency and a second path 
 
 **Top bar**, on every screen: the two screens and the "Acting as" selection with the user's roles. Until a user is selected, the UI calls nothing but `GET /users`.
 
-**Requests**, the home screen: one table in the order the API returns, latest change first. No filters. The "Next step" column tells the acting user what a request needs from them:
+**Requests**, the home screen: one table in the order the API returns, latest change first. No filters. Three columns keep apart what is easy to mix up: the status of the latest revision, the discount it asks for, and the discount that is approved and in force, which can come from an earlier revision. The "Next step" column tells the acting user what a request needs from them:
 
 | Label | When |
 |---|---|
 | Awaiting your review | `PENDING`, created by someone else, and the user is a reviewer |
-| Needs your revision | `DECLINED` and created by the user |
+| Needs your revision | `DECLINED`, created by the user, and no approval is in force. With an approval in force a declined proposal needs nothing |
 | Awaiting review | `PENDING` and created by the user |
 
-**Request detail**: the current discount and reason and the action panel are at the top, so a reviewer decides with the reason in view. The history follows: every revision with its decision directly below it.
+**Request detail**: the latest revision's discount and reason and the action panel are at the top, so a reviewer decides with the reason in view. Below the reason the screen names the approval in force, for example "20 bps from revision 2", or says that nothing is approved yet. The history follows: every revision with its decision directly below it, and the revision in force is marked.
 
 **Applications**: every application with its request, or "New request" for a relationship manager when there is none. For the mortgage process each row shows the approved discount, read from the approved-discount endpoint and not derived from the list. Only `NO_APPROVED_DISCOUNT` is shown as "No approved discount"; any other failure is shown as "Could not be read". Choosing the mortgage process as the acting user opens this screen, from wherever the user was.
 
@@ -40,10 +40,10 @@ An action that does not belong to the user's roles is hidden. An action that bel
 | Action | Shown to | Possible when | Otherwise |
 |---|---|---|---|
 | New request | Relationship manager | The application has no request | A link to the request |
-| Revise | Relationship manager | The user created the request and it is `PENDING` or `DECLINED` | "Only Alice can revise this request." |
-| Approve, decline | Reviewer | The user did not create the request and it is `PENDING` | "Another reviewer must decide on your request." or "Waiting for a revision." |
+| Revise | Relationship manager | The user created the request, in every status | "Only Alice can revise this request." |
+| Approve, decline | Reviewer | The user did not create the request and it is `PENDING` | On the user's own `PENDING` request: "Another reviewer must decide on your request." On another user's request that is not `PENDING`: "Nothing to decide until Alice revises it." |
 
-On an `APPROVED` request the panel shows "Approved requests cannot be changed."
+An approval in force changes what two messages say, because it is easy to misread (assumption A10). The creator of a declined request reads that the earlier approval stays in force. A reviewer who decides on a request with an approval in force reads, above the buttons: "In force now: 20 bps from revision 2. Approving replaces it; declining keeps it."
 
 ## Reading
 
@@ -61,7 +61,7 @@ A response is **definite** when it is a valid success or an error from the contr
 - Until the current request has been loaded, every action on it stays closed. This block belongs to the request on screen, not to the draft: discarding the draft does not lift it. If the reload fails, the draft and the block stay.
 - Only a read that starts after the answer lifts the block. When the answer of a submission is shown, every read that started earlier is dropped, so an earlier read can neither draw over a success nor open a blocked screen.
 - After a reload the draft is kept but not merged with the current values. The user compares it with the current request above and submits it themselves.
-- If the action is no longer possible after the reload, for example because the request was approved meanwhile, the draft is discarded: there is nothing left to submit it to.
+- If the action is no longer possible after the reload, for example a decision on a request that another reviewer decided meanwhile, the draft is discarded: there is nothing left to submit it to.
 - The answer is shown only if the acting user and the address are the same as when it was sent. Nothing is sent from a screen that the address no longer names. If they left before it arrived, it is not shown; the next read of the request shows what happened, which is what the contract asks a client to do after a timeout.
 
 **Create** follows the contract's retry rule: one submission is one idempotency key and one payload.

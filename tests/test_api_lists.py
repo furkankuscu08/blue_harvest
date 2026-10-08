@@ -15,6 +15,7 @@ SUMMARY_FIELDS = {
     "version",
     "created_by",
     "current_discount_bps",
+    "approved_discount_bps",
     "updated_at",
 }
 
@@ -30,6 +31,7 @@ def summary(row: dict) -> tuple:
         row["version"],
         row["created_by"],
         row["current_discount_bps"],
+        row["approved_discount_bps"],
     )
 
 
@@ -40,10 +42,10 @@ def test_requests_are_listed_with_the_latest_change_first(client):
     rows = response.json()
     # Seed: APP-1005 changed last, APP-1002 first. APP-1001 has no request.
     assert [summary(row) for row in rows] == [
-        ("APP-1005", "PENDING", 1, "dave", 15),
-        ("APP-1004", "APPROVED", 4, "alice", 20),
-        ("APP-1003", "DECLINED", 2, "bob", 60),
-        ("APP-1002", "PENDING", 1, "alice", 25),
+        ("APP-1005", "PENDING", 1, "dave", 15, None),
+        ("APP-1004", "APPROVED", 4, "alice", 20, 20),
+        ("APP-1003", "DECLINED", 2, "bob", 60, None),
+        ("APP-1002", "PENDING", 1, "alice", 25, None),
     ]
     for row in rows:
         assert set(row) == SUMMARY_FIELDS
@@ -54,9 +56,9 @@ def test_requests_are_listed_with_the_latest_change_first(client):
 @pytest.mark.parametrize(
     ("change", "expected"),
     [
-        ("create", ("APP-1001", "PENDING", 1, "alice", 20)),
-        ("revise", ("APP-1003", "PENDING", 3, "bob", 40)),
-        ("decide", ("APP-1002", "DECLINED", 2, "alice", 25)),
+        ("create", ("APP-1001", "PENDING", 1, "alice", 20, None)),
+        ("revise", ("APP-1003", "PENDING", 3, "bob", 40, None)),
+        ("decide", ("APP-1002", "DECLINED", 2, "alice", 25, None)),
     ],
     ids=["create", "revise", "decide"],
 )
@@ -90,6 +92,21 @@ def test_changed_request_moves_to_the_top_of_the_list(client, change, expected):
         changed.json()["id"],
         changed.json()["updated_at"],
     )
+
+
+def test_list_shows_the_latest_proposal_next_to_the_approval_in_force(client):
+    # Seed: APP-1004 is APPROVED at 20 bps; version 4. Without the second number
+    # the row would read as a request with nothing approved.
+    request_id = request_id_for(client, "APP-1004")
+    revise(client, request_id, expected_version=4, discount_bps=30, reason="More.")
+    assert summary(list_requests(client).json()[0]) == ("APP-1004", "PENDING", 5, "alice", 30, 20)
+
+    declined = decide(
+        client, request_id, user="dave", expected_version=5, outcome="DECLINED", comment="No."
+    )
+
+    assert declined.status_code == 201
+    assert summary(list_requests(client).json()[0]) == ("APP-1004", "DECLINED", 6, "alice", 30, 20)
 
 
 def test_requests_changed_at_the_same_moment_are_ordered_by_id(client):

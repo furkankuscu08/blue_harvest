@@ -34,6 +34,19 @@ def test_request_detail_shows_the_full_history(client):
     assert all(is_utc(r["decision"]["decided_at"]) for r in body["revisions"])
 
 
+@pytest.mark.parametrize(
+    ("application_id", "approval_in_force"),
+    [("APP-1002", (None, None)), ("APP-1003", (None, None)), ("APP-1004", (2, 20))],
+    ids=["pending", "declined", "approved"],
+)
+def test_request_detail_names_the_approval_in_force(client, application_id, approval_in_force):
+    # Seed: APP-1002 is PENDING, APP-1003 is DECLINED, APP-1004 was approved at 20 bps
+    # in revision 2, after revision 1 at 35 bps was declined.
+    body = get(client, request_id_for(client, application_id)).json()
+
+    assert (body["approved_revision_number"], body["approved_discount_bps"]) == approval_in_force
+
+
 def test_unknown_request_is_not_found(client):
     response = get(client, str(uuid.uuid4()))
 

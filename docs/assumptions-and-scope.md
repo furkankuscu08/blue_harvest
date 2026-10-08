@@ -19,9 +19,9 @@ Taken from the assignment. The identifiers are used in the traceability table.
 
 One stakeholder wants the relationship manager to be able to change the requested discount after submitting. Another wants an approval to always apply to the exact request that was reviewed.
 
-**Decision:** before approval a request can be changed through a new revision; every decision is bound to the revision that was reviewed, and after approval the request cannot be changed.
+**Decision:** a request is changed only by adding a new revision, and every decision is bound to the revision that was reviewed. An approved request can be revised too: its approval stays in force until a later revision is approved.
 
-Both needs are met up to the point of approval. Revisions are immutable, so the content a reviewer saw can never change underneath a decision. A reviewer acting on an outdated view is rejected and has to look at the current revision first. The need we do not meet is changing a discount after it has been approved; see section D.
+Both needs are met. Revisions are immutable, so the content a reviewer saw can never change underneath a decision. A reviewer acting on an outdated view is rejected and has to look at the current revision first. The relationship manager can keep negotiating after an approval, and the mortgage process never reads a discount that no reviewer approved.
 
 Details are in `state-model.md`.
 
@@ -34,12 +34,13 @@ None of these is stated in the assignment. Each is a choice we made and would co
 | A1 | An application has at most one pricing exception request. | The mortgage process gets one unambiguous answer per application. | Allow several requests and define which approval is in force. |
 | A2 | Four-eyes: the person who created a request cannot decide on it. | Standard separation of duties in financial services. | Revise the separation-of-duties policy and its tests. |
 | A3 | Only the manager who created a request can revise it. | Keeps A2 meaningful: nobody can change a request and then approve their own change. | Track who authored each revision and apply four-eyes per revision. |
-| A4 | A declined request can be revised and resubmitted. An approval is final. | Explains "previous decisions" in R4, and gives a declined request a way forward under A1. | Make decline final and allow a new request instead. This also means changing A1. |
+| A4 | A declined request can be revised and resubmitted. An approved request can be revised too; the new revision needs its own approval. | Explains "previous decisions" in R4, gives a declined request a way forward under A1, and lets a negotiation continue after an approval. | Make an approval final, or make decline final and allow a new request instead. The second also means changing A1. |
 | A5 | The discount is a positive whole number of basis points, at most 200 (2.00 percentage points). The limit is one constant in the code. | Rejects obviously wrong input. The number itself is a placeholder. | A different limit is a one-line change. Fractional basis points or a zero discount would change validation and the data model. |
 | A6 | Mortgage applications and users are seed data. This service reads them and does not manage them. | The assignment lets us represent them as we find useful. | Integrate with the systems that own them. |
 | A7 | The caller is identified by an `X-User-Id` header. This is not authentication. | Lets reviewers exercise roles locally without an identity provider. | See section D. |
 | A8 | Who decided and when are set by the server, in UTC. They are never taken from the request body. | An audit record must not be writable by the caller. | No alternative considered. |
 | A9 | Every decision carries a comment. | A decline tells the relationship manager what to change before resubmitting (A4); an approval records why the exception is justified. | Make the comment optional on approval. |
+| A10 | A new revision does not withdraw the approval in force. While the new revision is pending, or after it was declined, the last approval stays in force. When a later revision is approved, that approval replaces it. | Asking for more must not cost the customer the discount the bank already granted. A reviewer who declines a new proposal says no to that proposal only. | Withdraw the approval as soon as a new revision is submitted, or let a reviewer cancel it; see "Cancelling an approved discount" in section D. |
 
 ## D. Deliberately out of scope
 
@@ -59,8 +60,8 @@ Each would need to be confirmed as a requirement first. None is assumed to be ne
 
 | Feature | If the client needs it |
 |---|---|
-| Replacing an approved discount (supersede) | A new request that replaces the approved one after its own review. |
-| Cancelling an approved discount (revoke) | A separate, audited action; it is not covered by supersede. |
+| Cancelling an approved discount (revoke) | A separate, audited action. Declining a new revision does not cancel the approval in force (A10). |
+| Changing a discount the mortgage process has already used | The approved-discount endpoint gives the discount that can be used at the moment it is read. What happens to an offer that was already made belongs to the mortgage process. |
 | Withdrawing a request | A `WITHDRAWN` status available to the creator. |
 | Reviewer authority limits | Tiered approval based on the size of the discount. |
 | Notifying the mortgage process | An event on approval using an outbox. Not needed while querying the endpoint is enough. |

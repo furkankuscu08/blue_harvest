@@ -23,6 +23,12 @@ from tests.helpers import create, decide, get, request_id_for, revise
 APPROVE = {"outcome": "APPROVED", "comment": "Fits policy."}
 DECLINE = {"outcome": "DECLINED", "comment": "Too high."}
 CHANGE = {"discount_bps": 35, "reason": "Second competing offer."}
+NOTHING = (None, None)
+
+
+def in_force(detail: dict) -> tuple:
+    """The approval in force as a request detail names it: revision and discount."""
+    return (detail["approved_revision_number"], detail["approved_discount_bps"])
 
 
 def slowed(change):
@@ -56,28 +62,79 @@ def meet_before_write_begin(client) -> None:
     event.listen(engine, "before_cursor_execute", before_statement)
 
 
-@pytest.mark.parametrize(
-    "calls",
-    [
-        [(decide, {"user": "carol", **APPROVE}), (decide, {"user": "dave", **DECLINE})],
-        [(revise, {"user": "alice", **CHANGE}), (decide, {"user": "carol", **APPROVE})],
-    ],
-    ids=["approve-and-decline", "revise-and-approve"],
-)
-def test_only_one_of_two_concurrent_changes_wins(client, monkeypatch, calls):
+def nothing_approved(client) -> tuple[str, int]:
+    """Alice's request on APP-1001 at 20 bps: PENDING at version 1."""
+    return create(client).json()["id"], 1
+
+
+def approved_then_revised(client) -> tuple[str, int]:
+    """Approved at 20 bps in revision 1, then revised to 30 bps: PENDING at version 3."""
     request_id = create(client).json()["id"]
+    assert decide(client, request_id, expected_version=1, **APPROVE).status_code == 201
+    more = revise(client, request_id, expected_version=2, discount_bps=30, reason="More.")
+    assert more.status_code == 201
+    return request_id, 3
+
+
+# Each call is listed with the approval that must be in force if it wins. The value
+# is written out here: the winner's response and the stored request come from the
+# same code and would agree on a wrong one.
+@pytest.mark.parametrize(
+    ("start", "calls"),
+    [
+        (
+            nothing_approved,
+            [
+                (decide, {"user": "carol", **APPROVE}, (1, 20)),
+                (decide, {"user": "dave", **DECLINE}, NOTHING),
+            ],
+        ),
+        (
+            nothing_approved,
+            [
+                (revise, {"user": "alice", **CHANGE}, NOTHING),
+                (decide, {"user": "carol", **APPROVE}, (1, 20)),
+            ],
+        ),
+        (
+            approved_then_revised,
+            [
+                (decide, {"user": "carol", **APPROVE}, (2, 30)),
+                (decide, {"user": "dave", **DECLINE}, (1, 20)),
+            ],
+        ),
+        (
+            approved_then_revised,
+            [
+                (revise, {"user": "alice", **CHANGE}, (1, 20)),
+                (decide, {"user": "carol", **APPROVE}, (2, 30)),
+            ],
+        ),
+    ],
+    ids=[
+        "approve-and-decline",
+        "revise-and-approve",
+        "approve-and-decline-with-an-approval-in-force",
+        "revise-and-approve-with-an-approval-in-force",
+    ],
+)
+def test_only_one_of_two_concurrent_changes_wins(client, monkeypatch, start, calls):
+    request_id, version = start(client)
     monkeypatch.setattr(app.api, "decide", slowed(app.api.decide))
     monkeypatch.setattr(app.api, "revise", slowed(app.api.revise))
     meet_before_write_begin(client)
-    responses, errors = [], []
+    responses, errors = {}, []
 
-    def run(call, body):
+    def run(index, call, body):
         try:
-            responses.append(call(client, request_id, expected_version=1, **body))
+            responses[index] = call(client, request_id, expected_version=version, **body)
         except Exception as exc:
             errors.append(exc)
 
-    threads = [threading.Thread(target=run, args=call) for call in calls]
+    threads = [
+        threading.Thread(target=run, args=(index, call, body))
+        for index, (call, body, _) in enumerate(calls)
+    ]
     for thread in threads:
         thread.start()
     for thread in threads:
@@ -90,12 +147,13 @@ def test_only_one_of_two_concurrent_changes_wins(client, monkeypatch, calls):
     current = get(client, request_id).json()
     decision = current["revisions"][-1]["decision"]
     assert current["status"] == (decision["outcome"] if decision else "PENDING")
-    assert sorted(r.status_code for r in responses) == [201, 409]
-    [winner] = [r for r in responses if r.status_code == 201]
-    [loser] = [r for r in responses if r.status_code == 409]
-    assert loser.json()["code"] == "STALE_VERSION"
-    assert winner.json()["version"] == 2
-    assert get(client, request_id).json() == winner.json()
+    assert sorted(r.status_code for r in responses.values()) == [201, 409]
+    [won] = [index for index, r in responses.items() if r.status_code == 201]
+    [lost] = [index for index, r in responses.items() if r.status_code == 409]
+    assert responses[lost].json()["code"] == "STALE_VERSION"
+    assert responses[won].json()["version"] == version + 1
+    assert get(client, request_id).json() == responses[won].json()
+    assert in_force(current) == calls[won][2]
 
 
 def change_right_after_the_next_commit(client, change) -> None:
@@ -151,7 +209,15 @@ def history(detail: dict) -> list[tuple]:
 
 
 @pytest.mark.parametrize(
-    ("call", "body", "expected_status", "expected_history", "later_change", "later_status"),
+    (
+        "call",
+        "body",
+        "expected_status",
+        "expected_history",
+        "later_change",
+        "later_status",
+        "later_in_force",
+    ),
     [
         (
             revise,
@@ -160,6 +226,7 @@ def history(detail: dict) -> list[tuple]:
             [(1, 25, None), (2, 35, None)],
             approve_by_carol,
             "APPROVED",
+            (2, 35),
         ),
         (
             decide,
@@ -168,12 +235,20 @@ def history(detail: dict) -> list[tuple]:
             [(1, 25, "DECLINED")],
             revise_by_alice,
             "PENDING",
+            NOTHING,
         ),
     ],
     ids=["revise", "decide"],
 )
 def test_response_shows_the_state_this_change_produced(
-    client, call, body, expected_status, expected_history, later_change, later_status
+    client,
+    call,
+    body,
+    expected_status,
+    expected_history,
+    later_change,
+    later_status,
+    later_in_force,
 ):
     # Seed: APP-1002 is PENDING at 25 bps, created by alice; version 1.
     request_id = request_id_for(client, "APP-1002")
@@ -185,9 +260,13 @@ def test_response_shows_the_state_this_change_produced(
     body = response.json()
     assert (body["status"], body["version"]) == (expected_status, 2)
     assert history(body) == expected_history
+    # Nothing was approved when this change was made; the approval that follows
+    # in the revise case must not show up in its response.
+    assert in_force(body) == NOTHING
     latest = body["revisions"][-1]
     changed_at = latest["decision"]["decided_at"] if latest["decision"] else latest["created_at"]
     assert body["updated_at"] == changed_at
     # The later change did happen, so the response could have shown it.
     current = get(client, request_id).json()
     assert (current["status"], current["version"]) == (later_status, 3)
+    assert in_force(current) == later_in_force
