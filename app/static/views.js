@@ -112,9 +112,9 @@ function actionNotes(request, user, users) {
     } else notes.push("Awaiting review. You can still revise it.");
   }
   if (user.roles.includes("REVIEWER")) {
-    if (mine) notes.push("Another reviewer must decide on your request.");
-    else if (request.status === "PENDING") notes.push("Awaiting your review.");
-    else notes.push(`Nothing to decide until ${creator} revises it.`);
+    if (request.status === "PENDING") {
+      notes.push(mine ? "Another reviewer must decide on your request." : "Awaiting your review.");
+    } else if (!mine) notes.push(`Nothing to decide until ${creator} revises it.`);
   }
   if (notes.length === 0) notes.push("Your role has no actions on this request.");
   return notes;
@@ -340,7 +340,7 @@ export function requestsScreen({ requests, applications, users, user, onRefresh 
       : table(
           [
             "Application",
-            "Latest revision",
+            "Status",
             "Asked for",
             "Approved in force",
             "Requested by",

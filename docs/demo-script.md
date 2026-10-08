@@ -29,7 +29,7 @@ Continue right after step 7: APP-1001 is approved at 20 bps in revision 2.
 
 | Step | Acting as | Do | Expect |
 |---|---|---|---|
-| 8 | Alice | Open APP-1001, "Revise": 30 bps, a reason | `Pending`, revision 3; below the reason: "Approved in force: 20 bps from revision 2" |
+| 8 | Alice | Open APP-1001, "Revise": 30 bps, a reason | `Pending`, revision 3; below the reason, under "Approved in force": "20 bps from revision 2" |
 | 9 | Alice | Requests | APP-1001: `Pending`, asked for 30 bps, approved in force 20 bps |
 | 10 | Carol | Open APP-1001, comment, "Decline" | Above the buttons: "In force now: 20 bps from revision 2. Approving replaces it; declining keeps it." After the decline: `Declined`, and 20 bps from revision 2 is still in force |
 | 11 | Mortgage process | Applications | APP-1001: 20 bps, revision 2, approved by Carol |

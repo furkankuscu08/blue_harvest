@@ -41,7 +41,7 @@ An action that does not belong to the user's roles is hidden. An action that bel
 |---|---|---|---|
 | New request | Relationship manager | The application has no request | A link to the request |
 | Revise | Relationship manager | The user created the request, in every status | "Only Alice can revise this request." |
-| Approve, decline | Reviewer | The user did not create the request and it is `PENDING` | "Another reviewer must decide on your request." or "Nothing to decide until Alice revises it." |
+| Approve, decline | Reviewer | The user did not create the request and it is `PENDING` | On the user's own `PENDING` request: "Another reviewer must decide on your request." On another user's request that is not `PENDING`: "Nothing to decide until Alice revises it." |
 
 An approval in force changes what two messages say, because it is easy to misread (assumption A10). The creator of a declined request reads that the earlier approval stays in force. A reviewer who decides on a request with an approval in force reads, above the buttons: "In force now: 20 bps from revision 2. Approving replaces it; declining keeps it."
 

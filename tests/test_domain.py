@@ -5,7 +5,15 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.domain import Actor, DomainError, ErrorCode, create_request, decide, revise
+from app.domain import (
+    Actor,
+    DomainError,
+    ErrorCode,
+    approved_revision,
+    create_request,
+    decide,
+    revise,
+)
 from app.models import ExceptionRequest, Outcome, Role, Status
 
 # The seed users from docs/api-contract.md.
@@ -175,6 +183,16 @@ def test_earlier_revisions_never_change():
 
     assert request.revisions[0] is first
     assert first_revision() == before
+
+
+def test_approval_in_force_follows_the_revision_number_not_the_decision_time():
+    # The server's clock was set back between the two approvals, so the second
+    # one carries the earlier time. Wrong: the approval decided last by the clock.
+    request = approved_request()
+    revise(request, ALICE, expected_version=2, discount_bps=20, reason="Matches offer.", now=T2)
+    decide(request, DAVE, expected_version=3, outcome=Outcome.APPROVED, comment="Fine.", now=T0)
+
+    assert approved_revision(request).number == 2
 
 
 def test_other_manager_cannot_revise():
