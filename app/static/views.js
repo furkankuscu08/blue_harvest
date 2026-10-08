@@ -69,7 +69,10 @@ export function nextStep(request, user) {
   if (request.status === "PENDING" && !mine && user.roles.includes("REVIEWER")) {
     return "Awaiting your review";
   }
-  if (request.status === "DECLINED" && mine) return "Needs your revision";
+  // With an approval in force a declined proposal needs nothing: that approval stays.
+  if (request.status === "DECLINED" && mine && request.approved_discount_bps == null) {
+    return "Needs your revision";
+  }
   if (request.status === "PENDING" && mine) return "Awaiting review";
   return "";
 }
@@ -78,27 +81,40 @@ export function nextStep(request, user) {
 // "Actions". The API enforces these rules; this only decides what is offered.
 export function actionFor(request, user) {
   const mine = request.created_by === user.id;
-  if (mine && user.roles.includes("RELATIONSHIP_MANAGER") && request.status !== "APPROVED") {
-    return "revise";
-  }
+  if (mine && user.roles.includes("RELATIONSHIP_MANAGER")) return "revise";
   if (!mine && user.roles.includes("REVIEWER") && request.status === "PENDING") return "decide";
   return null;
 }
 
+// The approval in force, in words: docs/state-model.md. Null when nothing was approved.
+function inForce(request) {
+  if (request.approved_revision_number == null) return null;
+  return `${bps(request.approved_discount_bps)} from revision ${request.approved_revision_number}`;
+}
+
 function actionNotes(request, user, users) {
-  if (request.status === "APPROVED") return ["Approved requests cannot be changed."];
   const mine = request.created_by === user.id;
   const creator = nameOf(users, request.created_by);
+  const approved = inForce(request);
   const notes = [];
   if (user.roles.includes("RELATIONSHIP_MANAGER")) {
     if (!mine) notes.push(`Only ${creator} can revise this request.`);
-    else if (request.status === "DECLINED") notes.push("Declined. You can revise and resubmit it.");
-    else notes.push("You can revise it until a reviewer decides.");
+    else if (request.status === "APPROVED") {
+      notes.push(
+        "Approved. You can revise it to ask for another discount; this approval stays in force until a new revision is approved.",
+      );
+    } else if (request.status === "DECLINED") {
+      notes.push(
+        approved
+          ? `Declined. The approval of ${approved} stays in force. You can revise and resubmit.`
+          : "Declined. You can revise and resubmit it.",
+      );
+    } else notes.push("Awaiting review. You can still revise it.");
   }
   if (user.roles.includes("REVIEWER")) {
     if (mine) notes.push("Another reviewer must decide on your request.");
     else if (request.status === "PENDING") notes.push("Awaiting your review.");
-    else notes.push(`Waiting for a revision from ${creator}.`);
+    else notes.push(`Nothing to decide until ${creator} revises it.`);
   }
   if (notes.length === 0) notes.push("Your role has no actions on this request.");
   return notes;
@@ -210,6 +226,13 @@ function decideForm(request, draft, blocked, act) {
       },
     },
     el("p", { class: "strong" }, `Deciding on revision ${current.number} · ${bps(current.discount_bps)}`),
+    inForce(request)
+      ? el(
+          "p",
+          { class: "muted" },
+          `In force now: ${inForce(request)}. Approving replaces it; declining keeps it.`,
+        )
+      : null,
     textField("Comment", "comment", draft?.values.comment ?? "", draft?.sending),
     draft?.error ? problem(draft.error) : null,
     el(
@@ -293,6 +316,9 @@ export function requestsScreen({ requests, applications, users, user, onRefresh 
       ),
       badge(request.status),
       bps(request.current_discount_bps),
+      request.approved_discount_bps == null
+        ? el("span", { class: "muted" }, "None")
+        : bps(request.approved_discount_bps),
       nameOf(users, request.created_by),
       when(request.updated_at),
       nextStep(request, user),
@@ -312,7 +338,15 @@ export function requestsScreen({ requests, applications, users, user, onRefresh 
     rows.length === 0
       ? el("p", { class: "card empty" }, "No requests yet.")
       : table(
-          ["Application", "Status", "Discount", "Requested by", "Updated", "Next step"],
+          [
+            "Application",
+            "Latest revision",
+            "Asked for",
+            "Approved in force",
+            "Requested by",
+            "Updated",
+            "Next step",
+          ],
           rows,
         ),
   );
@@ -333,7 +367,7 @@ function decisionBlock(decision, users) {
   );
 }
 
-function historyItem(revision, users) {
+function historyItem(revision, users, inForceNumber) {
   const decision = revision.decision;
   return el(
     "li",
@@ -343,6 +377,7 @@ function historyItem(revision, users) {
       {},
       el("span", { class: "strong" }, `Revision ${revision.number} · ${bps(revision.discount_bps)}`),
       el("span", { class: "muted" }, " · ", when(revision.created_at)),
+      revision.number === inForceNumber ? el("span", { class: "strong" }, " · In force") : null,
     ),
     el("p", { class: "text" }, revision.reason),
     decision ? decisionBlock(decision, users) : el("p", { class: "muted" }, "No decision yet."),
@@ -386,11 +421,13 @@ export function requestScreen(screen) {
       el(
         "section",
         { class: "card" },
-        el("h2", {}, "Current request"),
+        el("h2", {}, "Latest revision"),
         el("p", { class: "discount" }, bps(current.discount_bps)),
         el("p", { class: "muted" }, `Revision ${current.number} · Version ${request.version}`),
         el("h3", {}, "Reason"),
         el("p", { class: "text" }, current.reason),
+        el("h3", {}, "Approved in force"),
+        el("p", { class: "text" }, inForce(request) ?? "Nothing approved yet."),
       ),
       el(
         "section",
@@ -404,7 +441,11 @@ export function requestScreen(screen) {
       ),
     ),
     el("h2", {}, "History"),
-    el("ol", { class: "history" }, ...request.revisions.map((r) => historyItem(r, users))),
+    el(
+      "ol",
+      { class: "history" },
+      ...request.revisions.map((r) => historyItem(r, users, request.approved_revision_number)),
+    ),
   );
 }
 
