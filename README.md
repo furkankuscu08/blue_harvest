@@ -14,7 +14,7 @@ docker compose up --build -d --wait
 
 Open http://localhost:8000/ and choose who to act as in the top bar. The seed data has five users and five applications: one without a request, and requests that are pending, declined and approved.
 
-- **The main story in the browser:** the seven steps at the top of [docs/demo-script.md](docs/demo-script.md): create, decline, revise, approve, a decision from a second tab that still shows the old version, and the read by the mortgage process.
+- **The main story in the browser:** the seven steps at the top of [docs/demo-script.md](docs/demo-script.md): create, decline, revise, approve, a decision from a second tab that still shows the old version, and the read by the mortgage process. Steps 8 to 12 go on negotiating after the approval.
 - **The API:** http://localhost:8000/docs. Every call except `GET /users` and `GET /health` needs an `X-User-Id` header, for example `alice`, `carol` or `mortgage-process`.
 - **The same story as a script:** `scripts/smoke.sh` runs 23 checks against the service in Docker, including a retried create. It needs `curl` and `jq`, and it deletes the local volume.
 
@@ -29,9 +29,11 @@ If port 8000 is taken, put `APP_PORT=8001` in front of the `docker compose up` a
 
 The assignment has two stakeholders who disagree. One wants the relationship manager to be able to change the discount after submitting. The other wants an approval to always apply to the exact request that was reviewed.
 
-**Before approval a request can be changed, but only by adding a new revision. Every decision is bound to the revision that was reviewed. After approval the request cannot be changed.**
+**A request is changed only by adding a new revision, and every decision is bound to the revision that was reviewed. An approved request can be revised too: its approval stays in force until a later revision is approved.**
 
-A revision never changes, so the content a reviewer saw cannot change underneath their decision. Every change raises the request's version, and a reviewer who decides from an outdated screen is refused with `409 STALE_VERSION` and has to look at the current revision first. What we do not offer is changing a discount after it was approved.
+A revision never changes, so the content a reviewer saw cannot change underneath their decision. Every change raises the request's version, and a reviewer who decides from an outdated screen is refused with `409 STALE_VERSION` and has to look at the current revision first.
+
+The negotiation can go on after an approval. Approved at 20 bps, the manager asks for 30: the request is pending again and the mortgage process still reads 20. If the reviewer declines, 20 stays. If a later revision at 25 is approved, the mortgage process reads 25. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is our assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
 
 More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram and the invariants I1 to I11.
 
@@ -43,11 +45,11 @@ R1 to R6 are the requirements of the assignment, as numbered in [docs/assumption
 |---|---|---|---|
 | R1 Create a request | `POST /requests`; one request per application | `test_relationship_manager_creates_a_pending_request`, `test_second_request_for_an_application_is_rejected` | I1 |
 | R2 Approve or decline; who and when | `POST /requests/{id}/decisions`; the server sets who and when; the creator cannot decide | `test_reviewer_approves_a_pending_request`, `test_reviewer_declines_with_a_comment`, `test_creator_cannot_decide_on_their_own_request`, `test_only_one_of_two_concurrent_changes_wins` | I3, I9 |
-| R3 Approved discount for the mortgage process | `GET /applications/{id}/approved-discount`; nothing unless the request is approved | `test_mortgage_process_reads_the_approved_discount`, `test_declined_request_is_revised_approved_and_read_downstream` | I11 |
+| R3 Approved discount for the mortgage process | `GET /applications/{id}/approved-discount` gives the approval in force: the latest approved revision, never a pending or declined one | `test_mortgage_process_reads_the_approved_discount`, `test_declined_request_is_revised_approved_and_read_downstream`, `test_approval_stays_in_force_while_a_later_revision_is_not_approved` | I11 |
 | R4 History | `GET /requests/{id}` returns every revision with its decision | `test_request_detail_shows_the_full_history`, `test_earlier_revisions_never_change` | I2 |
 | R5 No duplicate on a retry | `Idempotency-Key` on create; the first response is stored in the same transaction as the request and returned again; the same key with other fields is refused | `test_same_key_and_fields_replays_the_original_response`, `test_same_key_with_different_fields_is_rejected`, `test_request_is_not_stored_without_its_idempotency_record`, the replay steps of `scripts/smoke.sh`, the second [guard run](guard/runs/2026-10-05-idempotent-replay/result.md) | I10 |
 | R6 Easy to run locally | One command, no setup | The `docker` job in CI builds the image and calls it; `scripts/smoke.sh` | |
-| The stakeholder decision | A revision never changes; a decision needs the current version; an approval is final | `test_earlier_revisions_never_change`, `test_stale_version_cannot_approve`, `test_approved_request_cannot_be_revised`, steps 4 to 6 of the [demo script](docs/demo-script.md) | I2, I3, I7 |
+| The stakeholder decision | A revision never changes; a decision needs the current version; an approved request is changed only by a new revision with its own approval | `test_earlier_revisions_never_change`, `test_stale_version_cannot_approve`, `test_negotiation_continues_after_an_approval`, steps 4 to 6 and 8 to 12 of the [demo script](docs/demo-script.md) | I2, I3, I7, I11 |
 
 ## Assumptions and scope
 
@@ -55,10 +57,11 @@ None of these is stated in the assignment. They are our choices, and each would 
 
 - **A1:** an application has at most one pricing exception request.
 - **A2:** four-eyes: whoever created a request cannot decide on it.
-- **A4:** a declined request can be revised and resubmitted; an approval is final.
+- **A4:** a declined request can be revised and resubmitted. An approved request can be revised too; the new revision needs its own approval.
 - **A7:** the caller is identified by the `X-User-Id` header. This is not authentication.
+- **A10:** a new revision does not withdraw the approval in force; a later approval replaces it.
 
-All nine assumptions, each with what changes if it is wrong, and the features we deliberately did not build (replacing or revoking an approved discount, withdrawing, authority limits, notifications, expiry, pagination) are in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md).
+All ten assumptions, each with what changes if it is wrong, and the features we deliberately did not build (cancelling an approved discount, withdrawing, authority limits, notifications, expiry, pagination) are in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md).
 
 ## Tests
 
@@ -70,7 +73,7 @@ uv pip install -r requirements-dev.txt
 pytest
 ```
 
-209 tests. The main levels: the business rules on their own (`test_domain.py`), every endpoint against a real SQLite file, concurrent changes to one request (`test_api_concurrency.py`), and the two main stories from create to the downstream read (`test_end_to_end.py`). The rest cover the tables, the SQLite settings, the seed data and the serving of the UI. CI runs lint, the tests and a dependency audit in one job, and in a second job builds the Docker image and calls it. The UI has no automated browser tests; it was checked by hand with [docs/demo-script.md](docs/demo-script.md).
+221 tests. The main levels: the business rules on their own (`test_domain.py`), every endpoint against a real SQLite file, concurrent changes to one request (`test_api_concurrency.py`), and the two main stories from create to the downstream read (`test_end_to_end.py`). The rest cover the tables, the SQLite settings, the seed data and the serving of the UI. CI runs lint, the tests and a dependency audit in one job, and in a second job builds the Docker image and calls it. The UI has no automated browser tests; it was checked by hand with [docs/demo-script.md](docs/demo-script.md).
 
 All commands are in [AGENTS.md](AGENTS.md#commands). The endpoints, error codes and order of checks are in [docs/api-contract.md](docs/api-contract.md), the UI's rules in [docs/ui-design.md](docs/ui-design.md).
 
@@ -125,6 +128,7 @@ What a client needs on top, and this exercise does not have: an approved list of
 - The UI keeps the idempotency key in the page only. After a page reload, sending the same create again gets `REQUEST_ALREADY_EXISTS` if the earlier one was stored, and the UI links to the existing request.
 - Applications and users are seed data. Only `APP-1001` starts without a request, so a second create needs a seed reset.
 - Idempotency records do not expire. Only a seed reset removes them.
+- A reviewer cannot cancel an approval. Declining a new revision leaves the earlier approval in force, and an approval has no end date.
 - The guard experiment covers two deliberately created gaps.
 
 ## With more time
@@ -137,15 +141,16 @@ What a client needs on top, and this exercise does not have: an approved list of
 
 | Day | Hours | What |
 |---|---|---|
-| Before day 1 | 4 | Planning, three review rounds |
+| Before day 1 | 5 | Planning, three review rounds |
 | 1 | 4 | Assumptions and scope, state model, API contract |
-| 2 | 3 | Skeleton, Docker, CI, proof of the locking approach |
-| 3 | 3 | Business rules, first guard run |
+| 2 | 2 | Skeleton, Docker, CI, proof of the locking approach |
+| 3 | 2 | Business rules, first guard run |
 | 4 | 3 | Create with idempotency, decide, approved discount |
 | 5 | 3 | Revise, concurrency tests, lists |
-| 6 | 5 | UI |
+| 6 | 4 | UI |
 | 7 | 2 | Second guard run |
-| 8 | 2 | Checklist: smoke script, UI by hand |
+| 8 | 1 | Checklist: smoke script, UI by hand |
 | 9 | 2 | This README, contract clean-up |
+| After day 9 | 3 | Revising an approved request |
 
 31 hours in total. The plan and the log are in [docs/plan.md](docs/plan.md).

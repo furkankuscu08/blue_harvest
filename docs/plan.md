@@ -1,41 +1,46 @@
 # Working plan
 
-The current plan, last updated on 2026-10-05 after day 9. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
+The current plan, last updated on 2026-10-08, after the change that followed day 9. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
 
 The plan covers how the work is organised. What the service does is defined in [state-model.md](state-model.md), [api-contract.md](api-contract.md) and [assumptions-and-scope.md](assumptions-and-scope.md); those documents win over this one.
 
 ## Stack
 
-| Area | Choice | Why / production note |
-|---|---|---|
-| Language | Python 3.12 | The language I know. Team knows Java/C#; the assignment allows any. |
-| API | FastAPI + Pydantic v2 | OpenAPI and Swagger UI for free, which doubles as the "explore" instructions. |
-| Persistence | SQLite (file) via SQLAlchemy 2.0 | Zero setup for reviewers. Constraints and transactions are real. Production: Postgres + Alembic, with the concurrency tests re-validated there; not just a connection string change. |
-| Running it | `docker compose up` (Dockerfile + single-service compose, volume for the SQLite file) | The one run path shown to reviewers; same result on any machine. |
-| Development | `uv venv` + `requirements.txt` / `requirements-dev.txt` | Fast test loop and editor support; also the fallback for running without Docker. Direct dependencies live in `requirements.in`; `uv pip compile` produces the fully pinned `requirements.txt`. |
-| Tests | pytest + FastAPI TestClient | Domain tests, API tests against a real SQLite file, concurrency tests. |
-| Quality | ruff, GitHub Actions CI (tests via the venv path, plus image build and health check) | Deterministic gates that agents cannot talk their way past; keeps both paths working. |
-| UI | One static page (HTML, CSS, plain JavaScript) served by the same app | No frontend build; it uses the same public API. |
+
+| Area        | Choice                                                                                | Why / production note                                                                                                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Language    | Python 3.12                                                                           | The language I know. Team knows Java/C#; the assignment allows any.                                                                                                                            |
+| API         | FastAPI + Pydantic v2                                                                 | OpenAPI and Swagger UI for free, which doubles as the "explore" instructions.                                                                                                                  |
+| Persistence | SQLite (file) via SQLAlchemy 2.0                                                      | Zero setup for reviewers. Constraints and transactions are real. Production: Postgres + Alembic, with the concurrency tests re-validated there; not just a connection string change.           |
+| Running it  | `docker compose up` (Dockerfile + single-service compose, volume for the SQLite file) | The one run path shown to reviewers; same result on any machine.                                                                                                                               |
+| Development | `uv venv` + `requirements.txt` / `requirements-dev.txt`                               | Fast test loop and editor support; also the fallback for running without Docker. Direct dependencies live in `requirements.in`; `uv pip compile` produces the fully pinned `requirements.txt`. |
+| Tests       | pytest + FastAPI TestClient                                                           | Domain tests, API tests against a real SQLite file, concurrency tests.                                                                                                                         |
+| Quality     | ruff, GitHub Actions CI (tests via the venv path, plus image build and health check)  | Deterministic gates that agents cannot talk their way past; keeps both paths working.                                                                                                          |
+| UI          | One static page (HTML, CSS, plain JavaScript) served by the same app                  | No frontend build; it uses the same public API.                                                                                                                                                |
+
 
 SQLite rules: `PRAGMA foreign_keys=ON` and `busy_timeout` on every connection, WAL mode, short write transactions opened with `BEGIN IMMEDIATE`. WAL does not give multiple concurrent writers; that limit is accepted.
 
 ## Schedule
 
-All nine days are done; the API, the UI, the agent experiment and the README are complete.
+All nine days are done; the API, the UI, the agent experiment and the README are complete. One change of behaviour followed; see [Changes and why](#changes-and-why).
 
-| Day | Hours | Outcome | Done when |
-|---|---|---|---|
-| 1 | 4 | Assumptions and scope, state model, API contract | Done |
-| 2 | 3 | Process scaffolding, skeleton, Docker, CI, proof that `BEGIN IMMEDIATE` works | Done |
-| 3 | 3 | Domain core, test-first; invariant guard spike with the first recorded run | Done |
-| 4 | 3 | Identity, errors, seed and reset, create with idempotency, get, decide, approved discount | Done |
-| 5 | 3 | Revise, the full decline-revise-approve story, concurrency test at API level, list endpoints | Done |
-| 6 | 5 | UI and a draft of the demo script | Done |
-| 7 | 2 | Idempotent replay experiment | Done |
-| 8 | 2 | Checklist | Done |
-| 9 | 2 | README, contract clean-up, recorded demo | Done |
 
-Spent, including 4 hours of planning: 31 hours.
+| Day         | Hours | Outcome                                                                                      | Done when |
+| ----------- | ----- | -------------------------------------------------------------------------------------------- | --------- |
+| 1           | 4     | Assumptions and scope, state model, API contract                                             | Done      |
+| 2           | 2     | Process scaffolding, skeleton, Docker, CI, proof that `BEGIN IMMEDIATE` works                | Done      |
+| 3           | 2     | Domain core, test-first; invariant guard spike with the first recorded run                   | Done      |
+| 4           | 3     | Identity, errors, seed and reset, create with idempotency, get, decide, approved discount    | Done      |
+| 5           | 3     | Revise, the full decline-revise-approve story, concurrency test at API level, list endpoints | Done      |
+| 6           | 4     | UI and a draft of the demo script                                                            | Done      |
+| 7           | 2     | Idempotent replay experiment                                                                 | Done      |
+| 8           | 1     | Checklist                                                                                    | Done      |
+| 9           | 2     | README, contract clean-up, recorded demo                                                     | Done      |
+| After day 9 | 3     | An approved request can be revised                                                           | Done      |
+
+
+Spent, including 5 hours of planning: 31 hours.
 
 ### Day 6: UI
 
@@ -63,6 +68,8 @@ The invariant guard is described in [guard/README.md](../guard/README.md): an ag
 - Residual risks, for the README: missed rules, false alarms, tests that pass for the wrong reason, prompt injection through diff content.
 - It is a controlled experiment on deliberately created test gaps and is reported as such: two examples are evidence for two scenarios, not a general success rate.
 
+
+
 ### Day 8: checklist
 
 Only what is on the list is fixed; new ideas go to the README as next steps. No GitHub issues were written on days 6 and 7, so the list was these five items; what they found is below.
@@ -80,6 +87,8 @@ All five were run on 2026-10-05; the fixes are in pull request #23.
 - After a seed reset, a decision on a request that no longer exists shows "No request with this id." and the old screen stays open. Not fixed: the API has no delete, so only a reset causes it. It goes to the README as a next step.
 - The consistency check fails on the build with broken locking in the revise-and-approve case: the request is stored `APPROVED` while its latest revision has no decision.
 
+
+
 ### Day 9: README and documents
 
 - "Try it in five minutes": a few commands and one address.
@@ -96,7 +105,7 @@ Done on 2026-10-05, in pull requests #25 and #26.
 - The README was reviewed twice against the repository; what the reviews found is in `ai-usage.md`.
 - The demo script records the run by hand on 2026-10-05.
 
-No new behaviour from day 9 on. Idempotent retry is proven at API level (an automated test and a step in the smoke script); a lost response cannot be produced reliably by hand in a browser, and the README lists this as a known limit.
+No new behaviour from day 9 on; the one exception is described under [Changes and why](#changes-and-why). Idempotent retry is proven at API level (an automated test and a step in the smoke script); a lost response cannot be produced reliably by hand in a browser, and the README lists this as a known limit.
 
 ## Standing rules
 
@@ -109,6 +118,8 @@ No new behaviour from day 9 on. Idempotent retry is proven at API level (an auto
 - Never cut: run and test instructions, assumptions, time spent, both bonuses with meaningful verification evidence, isolation of agent-written tests.
 - [ai-usage.md](ai-usage.md) is written as the work happens.
 - Log time spent per day below.
+
+
 
 ## Changes and why
 
@@ -140,17 +151,31 @@ No new behaviour from day 9 on. Idempotent retry is proven at API level (an auto
 - The day 6 estimate rose from 3 to 5 hours and the total from about 33 to about 35: three screens with addresses instead of one, and the rules for late responses and uncertain results.
 - Cut from the design to stay small: filters on the list of requests, a separate handling for a lost connection (it shares the stale version path), and a text for every error code (the API's own message is shown).
 
+**After day 9 (2026-10-07), one change of behaviour.**
+
+- An approved request can be revised. The earlier approval stays in force until a later revision is approved, and the mortgage process reads the approval in force. Before, an approval was final and the relationship manager had no move left when a negotiation went on.
+- This sets aside "no new behaviour from day 9 on" once. The first decision met the first stakeholder only up to the approval; this one meets both.
+- Two other designs were dropped. A pre-approval that the manager confirms adds a status and a step to every request, and after the confirmation nothing can change again. Discounts that add up let a reviewer approve 30 bps while 50 apply, and get around the limit per request.
+- Kept small: no new status, endpoint or table; the approval in force is computed from the revisions. Cancelling an approval, an end date and approval tiers stay out of scope.
+- Built in one pull request, #27, so that the API, the UI and the documents never disagree on `main`. Rules and tests were reviewed before the code, the backend before the UI.
+
+
+
 ## Time log
 
-| Date | Hours | What |
-|---|---|---|
-| 2026-10-02 to 03 | 4 | Planning and three review rounds |
-| 2026-10-03 | 4 | Day 1: assumptions and scope, state model, API contract, review rounds |
-| 2026-10-03 | 3 | Day 2: process scaffolding, project skeleton, Docker, CI, SQLite concurrency proof |
-| 2026-10-03 | 3 | Day 3: domain core (test-first), invariant guard spike with an LLM-free harness and the first recorded run |
-| 2026-10-04 | 3 | Day 4: first API slice (identity, errors, seed and reset, create with idempotency, decide, approved discount, first end-to-end test), two test review rounds, AI usage log restructured |
-| 2026-10-04 | 3 | Day 5: revise, the full decline-revise-approve story, API concurrency and response-snapshot tests, list endpoints, smoke script moved into the repository, plan review |
-| 2026-10-05 | 5 | Day 6: the UI in two pull requests (read-only screens, then create, revise and decide with the stale version and retry rules), UI design document, draft of the demo script, browser checks by a second agent and by hand |
-| 2026-10-05 | 2 | Day 7: a baseline per mutant in the guard harness, the idempotent replay mutant, a review before the run, one recorded agent run with its result and limits |
-| 2026-10-05 | 2 | Day 8: the checklist (smoke script, the UI script and error paths by hand, a seed reset under an open UI), a consistency check in the concurrency test, a port check in the smoke script |
-| 2026-10-05 | 2 | Day 9: the API contract without its repetitions, the README with the traceability table, two review rounds of the README, the demo script result recorded |
+
+| Date             | Hours | What                                                                                                                                                                                                                      |
+| ---------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-02 to 03 | 5     | Planning and three review rounds                                                                                                                                                                                          |
+| 2026-10-03       | 4     | Day 1: assumptions and scope, state model, API contract, review rounds                                                                                                                                                    |
+| 2026-10-03       | 2     | Day 2: process scaffolding, project skeleton, Docker, CI, SQLite concurrency proof                                                                                                                                        |
+| 2026-10-03       | 2     | Day 3: domain core (test-first), invariant guard spike with an LLM-free harness and the first recorded run                                                                                                                |
+| 2026-10-04       | 3     | Day 4: first API slice (identity, errors, seed and reset, create with idempotency, decide, approved discount, first end-to-end test), two test review rounds, AI usage log restructured                                   |
+| 2026-10-04       | 3     | Day 5: revise, the full decline-revise-approve story, API concurrency and response-snapshot tests, list endpoints, smoke script moved into the repository, plan review                                                    |
+| 2026-10-05       | 4     | Day 6: the UI in two pull requests (read-only screens, then create, revise and decide with the stale version and retry rules), UI design document, draft of the demo script, browser checks by a second agent and by hand |
+| 2026-10-05       | 2     | Day 7: a baseline per mutant in the guard harness, the idempotent replay mutant, a review before the run, one recorded agent run with its result and limits                                                               |
+| 2026-10-05       | 1     | Day 8: the checklist (smoke script, the UI script and error paths by hand, a seed reset under an open UI), a consistency check in the concurrency test, a port check in the smoke script                                  |
+| 2026-10-05       | 2     | Day 9: the API contract without its repetitions, the README with the traceability table, two review rounds of the README, the demo script result recorded                                                                 |
+| 2026-10-07 to 08 | 3     | After day 9: an approved request can be revised and its approval stays in force (rules, tests, API, UI and documents in one pull request), reviews of the tests and the backend, the demo script run again by hand        |
+
+
