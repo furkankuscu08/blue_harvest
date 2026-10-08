@@ -21,14 +21,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_read_session, get_write_session
-from app.domain import Actor, create_request, decide, require_role, revise
+from app.domain import Actor, approved_revision, create_request, decide, require_role, revise
 from app.errors import ApiError
 from app.models import (
     Application,
     ExceptionRequest,
     IdempotencyRecord,
+    Revision,
     Role,
-    Status,
     User,
 )
 from app.schemas import (
@@ -81,9 +81,26 @@ def _require_application(session: Session, application_id: str) -> None:
         raise ApiError(404, "APPLICATION_NOT_FOUND", "No application with this id.")
 
 
+def _detail(request: ExceptionRequest) -> RequestDetail:
+    """The request with its history and the approval in force."""
+    approved = approved_revision(request)
+    return RequestDetail(
+        id=request.id,
+        application_id=request.application_id,
+        status=request.status,
+        version=request.version,
+        created_by=request.created_by,
+        created_at=request.created_at,
+        updated_at=request.updated_at,
+        approved_revision_number=approved.number if approved else None,
+        approved_discount_bps=approved.discount_bps if approved else None,
+        revisions=request.revisions,
+    )
+
+
 def _respond_after_commit(session: Session, request: ExceptionRequest) -> JSONResponse:
     """Build the detail inside the transaction, then commit, then return it."""
-    response_body = RequestDetail.model_validate(request).model_dump(mode="json")
+    response_body = _detail(request).model_dump(mode="json")
     session.commit()
     return JSONResponse(status_code=201, content=response_body)
 
@@ -142,7 +159,7 @@ def create_exception_request(
         now=now,
     )
     session.add(request)
-    response_body = RequestDetail.model_validate(request).model_dump(mode="json")
+    response_body = _detail(request).model_dump(mode="json")
     session.add(
         IdempotencyRecord(
             user_id=caller.id,
@@ -160,21 +177,25 @@ def create_exception_request(
 def list_requests(session: ReadSession, _caller: ReadActor) -> list[RequestSummary]:
     requests = session.scalars(
         select(ExceptionRequest)
-        .options(selectinload(ExceptionRequest.revisions))
+        .options(selectinload(ExceptionRequest.revisions).selectinload(Revision.decision))
         .order_by(ExceptionRequest.updated_at.desc(), ExceptionRequest.id)
     )
-    return [
-        RequestSummary(
-            id=request.id,
-            application_id=request.application_id,
-            status=request.status,
-            version=request.version,
-            created_by=request.created_by,
-            current_discount_bps=request.revisions[-1].discount_bps,
-            updated_at=request.updated_at,
+    summaries = []
+    for request in requests:
+        approved = approved_revision(request)
+        summaries.append(
+            RequestSummary(
+                id=request.id,
+                application_id=request.application_id,
+                status=request.status,
+                version=request.version,
+                created_by=request.created_by,
+                current_discount_bps=request.revisions[-1].discount_bps,
+                approved_discount_bps=approved.discount_bps if approved else None,
+                updated_at=request.updated_at,
+            )
         )
-        for request in requests
-    ]
+    return summaries
 
 
 @router.get("/requests/{request_id}")
@@ -182,7 +203,7 @@ def get_exception_request(
     request_id: uuid.UUID, session: ReadSession, _caller: ReadActor
 ) -> RequestDetail:
     # Built while the read transaction is open, so it comes from one snapshot.
-    return RequestDetail.model_validate(_load_request(session, request_id))
+    return _detail(_load_request(session, request_id))
 
 
 @router.post("/requests/{request_id}/revisions", status_code=201, response_model=RequestDetail)
@@ -241,10 +262,11 @@ def get_approved_discount(
     request = session.scalar(
         select(ExceptionRequest).where(ExceptionRequest.application_id == application_id)
     )
-    if request is None or request.status != Status.APPROVED:
-        raise ApiError(404, "NO_APPROVED_DISCOUNT", "The application has no approved request.")
+    # The approval in force, also while a later revision is pending or declined.
+    approved = approved_revision(request) if request is not None else None
+    if approved is None:
+        raise ApiError(404, "NO_APPROVED_DISCOUNT", "The application has no approved discount.")
 
-    approved = request.revisions[-1]
     return ApprovedDiscount(
         application_id=application_id,
         request_id=request.id,

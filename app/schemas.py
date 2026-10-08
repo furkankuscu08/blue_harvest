@@ -66,6 +66,8 @@ class RequestDetail(Output):
     created_by: str
     created_at: datetime
     updated_at: datetime
+    approved_revision_number: int | None
+    approved_discount_bps: int | None
     revisions: list[RevisionOutput]
 
 
@@ -76,6 +78,7 @@ class RequestSummary(BaseModel):
     version: int
     created_by: str
     current_discount_bps: int
+    approved_discount_bps: int | None
     updated_at: datetime
 
 

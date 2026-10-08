@@ -73,9 +73,9 @@ def revise(
     if actor.id != request.created_by:
         raise DomainError(ErrorCode.NOT_REQUEST_OWNER)
     _require_version(request, expected_version)
-    if request.status not in (Status.PENDING, Status.DECLINED):
-        raise DomainError(ErrorCode.INVALID_STATE)
 
+    # Possible in every status (A4). On an approved request the earlier approval
+    # is kept and stays in force until this revision is approved (A10).
     number = request.revisions[-1].number + 1
     request.revisions.append(
         Revision(number=number, discount_bps=discount_bps, reason=reason, created_at=now)
@@ -108,6 +108,14 @@ def decide(
     request.status = Status(outcome)
     request.version += 1
     request.updated_at = now
+
+
+def approved_revision(request: ExceptionRequest) -> Revision | None:
+    """The approval in force (I11): the approved revision with the highest number."""
+    for revision in reversed(request.revisions):
+        if revision.decision is not None and revision.decision.outcome == Outcome.APPROVED:
+            return revision
+    return None
 
 
 def require_role(actor: Actor, role: Role) -> None:
