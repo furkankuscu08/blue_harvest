@@ -7,7 +7,11 @@
       "Bash(.venv/bin/ruff:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(gh run watch:*)",
+      "Bash(docker compose ps:*)",
+      "Bash(docker volume ls:*)"
     ],
     "ask": [
       "Bash(git push:*)"
