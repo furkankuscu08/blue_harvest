@@ -2,7 +2,7 @@
 
 The main story in the browser, with the checks that have no automated test. It follows the example in [state-model.md](state-model.md), which [story.html](story.html) shows step by step.
 
-The steps were run by hand in Google Chrome, against the service in Docker, on 2026-10-05, and steps 1 to 12 again on 2026-10-08, with the Requests list also checked in a narrow window; every step gave the expected result. On 2026-10-09 the amounts of the story changed, steps 4 to 6 became a revise under an open review, and the two tabs of one reviewer moved to step 13. Steps 1 to 13 as written here have not been run yet.
+The steps were run by hand in Google Chrome, against the service in Docker, on 2026-10-05, and every step gave the expected result. Since then the story changed twice, and each time the changed steps were run again by hand against the service in Docker, with the expected result: steps 1 to 12 on 2026-10-08, with the Requests list also checked in a narrow window, and steps 1 to 13 as written here on 2026-10-09, after the amounts changed, steps 4 to 6 became a revise under an open review, and the two tabs of one reviewer moved to step 13. Steps 14 to 22 were not run again; on 2026-10-05 they were steps 13 to 21.
 
 Start from the seed data:
 
