@@ -463,52 +463,85 @@ def test_stale_version_is_reported_before_invalid_state():
     )
 
 
-# The worked example in docs/state-model.md
+# The worked example in docs/state-model.md, which docs/story.html walks
 
 
-def test_worked_example_decline_revise_approve():
-    request = create_request(
-        ALICE,
-        application_id="APP-1004",
-        discount_bps=35,
-        reason="Competing offer from another lender.",
-        now=T0,
-    )
+def test_worked_example_nine_steps():
+    # Wrong: any row of the example's tables differs from what the rules produce.
     steps = []
 
     def record():
         assert_consistent(request)
-        steps.append((request.status, request.revisions[-1].number, request.version))
+        in_force = approved_revision(request)
+        steps.append(
+            (
+                request.status,
+                request.revisions[-1].number,
+                request.version,
+                in_force and (in_force.discount_bps, in_force.number),
+            )
+        )
 
+    def alice_revises(expected_version: int, discount_bps: int):
+        revise(
+            request,
+            ALICE,
+            expected_version=expected_version,
+            discount_bps=discount_bps,
+            reason="Customer asks.",
+            now=T2,
+        )
+        record()
+
+    def carol_decides(expected_version: int, outcome: Outcome):
+        decide(
+            request,
+            CAROL,
+            expected_version=expected_version,
+            outcome=outcome,
+            comment="Reviewed.",
+            now=T3,
+        )
+        record()
+
+    request = create_request(
+        ALICE, application_id="APP-1001", discount_bps=40, reason="Competing offer.", now=T0
+    )
     record()
-    decide(
+    carol_decides(1, Outcome.DECLINED)
+    alice_revises(2, 20)
+    alice_revises(3, 25)
+
+    # Step 4: carol still sees 20 bps. Wrong: her approval lands on the 25 bps.
+    assert_rejected_without_change(
         request,
-        CAROL,
-        expected_version=1,
-        outcome=Outcome.DECLINED,
-        comment="Above what the competing offer justifies.",
-        now=T1,
+        ErrorCode.STALE_VERSION,
+        lambda: decide(
+            request, CAROL, expected_version=3, outcome=Outcome.APPROVED, comment="Fine.", now=T3
+        ),
     )
-    record()
-    revise(
-        request,
-        ALICE,
-        expected_version=2,
-        discount_bps=20,
-        reason="Matches the competing offer.",
-        now=T2,
-    )
-    record()
-    decide(
-        request, CAROL, expected_version=3, outcome=Outcome.APPROVED, comment="Fits policy.", now=T3
-    )
-    record()
+
+    carol_decides(4, Outcome.APPROVED)
+    alice_revises(5, 35)
+    carol_decides(6, Outcome.DECLINED)
+    alice_revises(7, 30)
+    carol_decides(8, Outcome.APPROVED)
 
     assert steps == [
-        (Status.PENDING, 1, 1),
-        (Status.DECLINED, 1, 2),
-        (Status.PENDING, 2, 3),
-        (Status.APPROVED, 2, 4),
+        (Status.PENDING, 1, 1, None),
+        (Status.DECLINED, 1, 2, None),
+        (Status.PENDING, 2, 3, None),
+        (Status.PENDING, 3, 4, None),
+        (Status.APPROVED, 3, 5, (25, 3)),
+        (Status.PENDING, 4, 6, (25, 3)),
+        (Status.DECLINED, 4, 7, (25, 3)),
+        (Status.PENDING, 5, 8, (25, 3)),
+        (Status.APPROVED, 5, 9, (30, 5)),
     ]
-    assert [r.decision.outcome for r in request.revisions] == [Outcome.DECLINED, Outcome.APPROVED]
-    assert request.revisions[-1].discount_bps == 20
+    assert [(r.discount_bps, r.decision and r.decision.outcome) for r in request.revisions] == [
+        (40, Outcome.DECLINED),
+        (20, None),
+        (25, Outcome.APPROVED),
+        (35, Outcome.DECLINED),
+        (30, Outcome.APPROVED),
+    ]

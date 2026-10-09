@@ -27,7 +27,7 @@ Not chosen: server-rendered pages with HTMX (a new dependency and a second path 
 | Needs your revision | `DECLINED`, created by the user, and no approval is in force. With an approval in force a declined proposal needs nothing |
 | Awaiting review | `PENDING` and created by the user |
 
-**Request detail**: the latest revision's discount and reason and the action panel are at the top, so a reviewer decides with the reason in view. Below the reason the screen names the approval in force, for example "20 bps from revision 2", or says that nothing is approved yet. The history follows: every revision with its decision directly below it, and the revision in force is marked.
+**Request detail**: the latest revision's discount and reason and the action panel are at the top, so a reviewer decides with the reason in view. Below the reason the screen names the approval in force, for example "25 bps from revision 3", or says that nothing is approved yet. The history follows: every revision with its decision directly below it, and the revision in force is marked.
 
 **Applications**: every application with its request, or "New request" for a relationship manager when there is none. For the mortgage process each row shows the approved discount, read from the approved-discount endpoint and not derived from the list. Only `NO_APPROVED_DISCOUNT` is shown as "No approved discount"; any other failure is shown as "Could not be read". Choosing the mortgage process as the acting user opens this screen, from wherever the user was.
 
@@ -43,7 +43,7 @@ An action that does not belong to the user's roles is hidden. An action that bel
 | Revise | Relationship manager | The user created the request, in every status | "Only Alice can revise this request." |
 | Approve, decline | Reviewer | The user did not create the request and it is `PENDING` | On the user's own `PENDING` request: "Another reviewer must decide on your request." On another user's request that is not `PENDING`: "Nothing to decide until Alice revises it." |
 
-An approval in force changes what two messages say, because it is easy to misread (assumption A10). The creator of a declined request reads that the earlier approval stays in force. A reviewer who decides on a request with an approval in force reads, above the buttons: "In force now: 20 bps from revision 2. Approving replaces it; declining keeps it."
+An approval in force changes what two messages say, because it is easy to misread (assumption A10). The creator of a declined request reads that the earlier approval stays in force. A reviewer who decides on a request with an approval in force reads, above the buttons: "In force now: 25 bps from revision 3. Approving replaces it; declining keeps it."
 
 ## Reading
 

@@ -1,4 +1,4 @@
-"""The main stories through the API, from docs/state-model.md, "Example"."""
+"""Stories through the API: an approval the mortgage process reads, and what follows it."""
 
 from tests.helpers import create, decide, get, read_discount, revise
 

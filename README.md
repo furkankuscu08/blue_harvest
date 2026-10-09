@@ -14,9 +14,9 @@ docker compose up --build -d --wait
 
 Open http://localhost:8000/ and choose who to act as in the top bar. The seed data has five users and five applications: one without a request, and requests that are pending, declined and approved.
 
-- **The main story in the browser:** the seven steps at the top of [docs/demo-script.md](docs/demo-script.md): create, decline, revise, approve, a decision from a second tab that still shows the old version, and the read by the mortgage process. Steps 8 to 12 go on negotiating after the approval.
+- **The main story in the browser:** the seven steps at the top of [docs/demo-script.md](docs/demo-script.md): create, decline, revise, a second revise while the reviewer still has the first one open, an approval that is refused until the reviewer reloads, and the read by the mortgage process. Steps 8 to 12 go on negotiating after the approval.
 - **The API:** http://localhost:8000/docs. Every call except `GET /users` and `GET /health` needs an `X-User-Id` header, for example `alice`, `carol` or `mortgage-process`.
-- **The same story as a script:** `scripts/smoke.sh` runs 23 checks against the service in Docker, including a retried create. It needs `curl` and `jq`, and it deletes the local volume.
+- **The same story as a script:** `scripts/smoke.sh` runs 24 checks against the service in Docker, including a retried create and the first five steps of the example. It needs `curl` and `jq`, and it deletes the local volume.
 
 ```bash
 docker compose exec app python -m app.seed --reset   # back to the seed data
@@ -33,9 +33,11 @@ The assignment has two stakeholders who disagree. One wants the relationship man
 
 A revision never changes, so the content a reviewer saw cannot change underneath their decision. Every change raises the request's version, and a reviewer who decides from an outdated screen is refused with `409 STALE_VERSION` and has to look at the current revision first.
 
-The negotiation can go on after an approval. Approved at 20 bps, the manager asks for 30: the request is pending again and the mortgage process still reads 20. If the reviewer declines, 20 stays. If a later revision at 25 is approved, the mortgage process reads 25. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is our assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
+The manager can also revise while the request is still waiting. Declined at 40 bps, revised to 20 and again to 25 before anyone decided: revision 2 stays without a decision, and a reviewer who still sees 20 bps is refused with `409 STALE_VERSION`. Nobody can approve an amount they have not seen.
 
-More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram and the invariants I1 to I11.
+The negotiation can go on after an approval. Approved at 25 bps, the manager asks for 35: the request is pending again and the mortgage process still reads 25. If the reviewer declines, 25 stays. If a later revision at 30 is approved, the mortgage process reads 30. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is our assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
+
+More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram, the invariants I1 to I11 and this example in nine steps. [docs/story.html](docs/story.html) walks the nine steps one at a time; GitHub shows its source, so open the file from a clone in a browser.
 
 ## Requirements and their evidence
 
@@ -152,5 +154,6 @@ What a client needs on top, and this exercise does not have: an approved list of
 | 8 | 1 | Checklist: smoke script, UI by hand |
 | 9 | 2 | This README, contract clean-up |
 | After day 9 | 3 | Revising an approved request |
+| After day 9 | 1 | The example in nine steps, and a page that walks it |
 
-31 hours in total. The plan and the log are in [docs/plan.md](docs/plan.md).
+32 hours in total. The plan and the log are in [docs/plan.md](docs/plan.md).
