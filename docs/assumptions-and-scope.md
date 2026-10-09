@@ -62,6 +62,7 @@ Each would need to be confirmed as a requirement first. None is assumed to be ne
 |---|---|
 | Cancelling an approved discount (revoke) | A separate, audited action. Declining a new revision does not cancel the approval in force (A10). |
 | Changing a discount the mortgage process has already used | The approved-discount endpoint gives the discount that can be used at the moment it is read. What happens to an offer that was already made belongs to the mortgage process. |
+| Requests on a mortgage that was already issued | This service does not know whether the mortgage was issued; applications are seed data (A6). Before production, create and revise are refused once the mortgage process reports the application as issued. |
 | Withdrawing a request | A `WITHDRAWN` status available to the creator. |
 | Reviewer authority limits | Tiered approval based on the size of the discount. |
 | Notifying the mortgage process | An event on approval using an outbox. Not needed while querying the endpoint is enough. |
