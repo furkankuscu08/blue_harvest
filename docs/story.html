@@ -101,9 +101,13 @@
     .revision.is-declined { background: var(--declined-bg); }
     .revision.is-approved { background: var(--approved-bg); }
 
-    .revision.is-latest,
-    .revision.is-in-force {
+    .revision.is-latest {
       border-color: var(--text);
+      border-width: 2px;
+    }
+
+    .revision.is-in-force {
+      border-color: var(--accent);
       border-width: 2px;
     }
 

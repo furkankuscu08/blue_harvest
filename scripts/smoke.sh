@@ -106,9 +106,9 @@ call GET /applications alice >/dev/null
 check "APP-1001 has no request again" "null" \
     "$(jq -r '.[] | select(.id == "APP-1001") | .request_id' "$WORK/body")"
 
-echo "10. alice asks 35 bps for APP-1001"
+echo "10. alice asks 40 bps for APP-1001"
 status=$(call POST /requests alice smoke-2 \
-    '{"application_id": "APP-1001", "discount_bps": 35, "reason": "Competing offer."}')
+    '{"application_id": "APP-1001", "discount_bps": 40, "reason": "Competing offer."}')
 check "create" "201 PENDING" "$(outcome "$status")"
 REQUEST_ID=$(jq -r .id "$WORK/body")
 
@@ -133,29 +133,34 @@ status=$(call POST "/requests/$REQUEST_ID/revisions" bob "" \
     '{"expected_version": 3, "discount_bps": 10, "reason": "Lower."}')
 check "only the creator revises" "403 NOT_REQUEST_OWNER" "$(outcome "$status")"
 
-echo "15. carol approves version 3"
+echo "15. alice revises version 3 to 25 bps before anyone decided"
+status=$(call POST "/requests/$REQUEST_ID/revisions" alice "" \
+    '{"expected_version": 3, "discount_bps": 25, "reason": "The customer asks for more."}')
+check "revise while pending" "201 PENDING 4" "$status $(jq -r '"\(.status) \(.version)"' "$WORK/body")"
+
+echo "16. carol approves version 4"
 status=$(call POST "/requests/$REQUEST_ID/decisions" carol "" \
-    '{"expected_version": 3, "outcome": "APPROVED", "comment": "Matches a documented offer."}')
+    '{"expected_version": 4, "outcome": "APPROVED", "comment": "Matches a documented offer."}')
 check "approve" "201 APPROVED" "$(outcome "$status")"
 
-echo "16. mortgage-process reads the approved discount"
+echo "17. mortgage-process reads the approved discount"
 status=$(call GET /applications/APP-1001/approved-discount mortgage-process)
-check "revision 2, 20 bps, approved by carol" "200 2 20 carol" \
+check "revision 3, 25 bps, approved by carol" "200 3 25 carol" \
     "$status $(jq -r '"\(.revision_number) \(.approved_discount_bps) \(.decided_by)"' "$WORK/body")"
 
-echo "17. the history keeps both revisions and both decisions"
+echo "18. the history keeps every revision; revision 2 has no decision"
 call GET "/requests/$REQUEST_ID" alice >/dev/null
-check "history" "1:35:DECLINED:dave 2:20:APPROVED:carol" \
+check "history" "1:40:DECLINED:dave 2:20:null:null 3:25:APPROVED:carol" \
     "$(jq -r '[.revisions[] | "\(.number):\(.discount_bps):\(.decision.outcome):\(.decision.decided_by)"] | join(" ")' "$WORK/body")"
 
-echo "18. the list of requests shows the approved request first"
+echo "19. the list of requests shows the approved request first"
 status=$(call GET /requests carol)
-check "latest change first" "200 APP-1001 APPROVED 4 20" \
+check "latest change first" "200 APP-1001 APPROVED 5 25" \
     "$status $(jq -r '.[0] | "\(.application_id) \(.status) \(.version) \(.current_discount_bps)"' "$WORK/body")"
 status=$(curl "${CURL[@]}" "$BASE/requests")
 check "the list needs a known user" "401 UNKNOWN_USER" "$(outcome "$status")"
 
-echo "19. the list of users needs no identity"
+echo "20. the list of users needs no identity"
 status=$(curl "${CURL[@]}" "$BASE/users")
 check "five seed users" "200 alice bob carol dave mortgage-process" \
     "$status $(jq -r '[.[].id] | join(" ")' "$WORK/body")"

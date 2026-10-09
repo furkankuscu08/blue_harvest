@@ -1,6 +1,6 @@
 # Working plan
 
-The current plan, last updated on 2026-10-08, after the change that followed day 9. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
+The current plan, last updated on 2026-10-09, after the changes that followed day 9. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
 
 The plan covers how the work is organised. What the service does is defined in [state-model.md](state-model.md), [api-contract.md](api-contract.md) and [assumptions-and-scope.md](assumptions-and-scope.md); those documents win over this one.
 
@@ -23,7 +23,7 @@ SQLite rules: `PRAGMA foreign_keys=ON` and `busy_timeout` on every connection, W
 
 ## Schedule
 
-All nine days are done; the API, the UI, the agent experiment and the README are complete. One change of behaviour followed; see [Changes and why](#changes-and-why).
+All nine days are done; the API, the UI, the agent experiment and the README are complete. One change of behaviour and a new worked example followed; see [Changes and why](#changes-and-why).
 
 
 | Day         | Hours | Outcome                                                                                      | Done when |
@@ -38,9 +38,10 @@ All nine days are done; the API, the UI, the agent experiment and the README are
 | 8           | 1     | Checklist                                                                                    | Done      |
 | 9           | 2     | README, contract clean-up, recorded demo                                                     | Done      |
 | After day 9 | 3     | An approved request can be revised                                                           | Done      |
+| After day 9 | 1     | The worked example in nine steps, with a page that walks it                                  | Done      |
 
 
-Spent, including 5 hours of planning: 31 hours.
+Spent, including 5 hours of planning: 32 hours.
 
 ### Day 6: UI
 
@@ -105,7 +106,7 @@ Done on 2026-10-05, in pull requests #25 and #26.
 - The README was reviewed twice against the repository; what the reviews found is in `ai-usage.md`.
 - The demo script records the run by hand on 2026-10-05.
 
-No new behaviour from day 9 on; the one exception is described under [Changes and why](#changes-and-why). Idempotent retry is proven at API level (an automated test and a step in the smoke script); a lost response cannot be produced reliably by hand in a browser, and the README lists this as a known limit.
+Day 9 added no behaviour. What changed later is described under [Changes and why](#changes-and-why). Idempotent retry is proven at API level (an automated test and a step in the smoke script); a lost response cannot be produced reliably by hand in a browser, and the README lists this as a known limit.
 
 ## Standing rules
 
@@ -139,7 +140,7 @@ No new behaviour from day 9 on; the one exception is described under [Changes an
 **After day 5 (2026-10-04), a look back at the first five days.**
 
 - The backend, the tests and `guard/` stay as they are. The cost was in the process: review and mutant rounds are now limited to concrete risks.
-- The smoke script moved into the repository as `scripts/smoke.sh`. It is the API demo and gets no new checks.
+- The smoke script moved into the repository as `scripts/smoke.sh`. It is the API demo.
 - Day 8 became a fixed checklist; "hardening" had no end.
 - The transaction race experiment stays a one-off, recorded in `ai-usage.md`. A script for it would need maintenance; instead the concurrency test will reject the broken end state directly, and that check runs in CI. It does not replace the comparison of the three transaction setups.
 - The UI is treated as a real deliverable, not as the first thing to cut.
@@ -159,6 +160,12 @@ No new behaviour from day 9 on; the one exception is described under [Changes an
 - Kept small: no new status, endpoint or table; the approval in force is computed from the revisions. Cancelling an approval, an end date and approval tiers stay out of scope.
 - Built in one pull request, #27, so that the API, the UI and the documents never disagree on `main`. Rules and tests were reviewed before the code, the backend before the UI.
 
+**After day 9 (2026-10-09), a new worked example.**
+
+- The example in `state-model.md` has nine steps and includes a revise while the request is still pending: revision 2 is never decided, and a decision sent with the older version is refused. `story.html` shows the nine steps one at a time.
+- One example everywhere: the domain test walks the nine steps, the demo script follows them in the browser, and the smoke script runs the first five. The smoke script got one check for this, 24 in total.
+- Two earlier rules are gone, because more revisions will follow: the smoke script takes new checks when the story changes, and new behaviour after day 9 no longer needs an exception. Each change is still recorded here.
+
 
 
 ## Time log
@@ -177,5 +184,6 @@ No new behaviour from day 9 on; the one exception is described under [Changes an
 | 2026-10-05       | 1     | Day 8: the checklist (smoke script, the UI script and error paths by hand, a seed reset under an open UI), a consistency check in the concurrency test, a port check in the smoke script                                  |
 | 2026-10-05       | 2     | Day 9: the API contract without its repetitions, the README with the traceability table, two review rounds of the README, the demo script result recorded                                                                 |
 | 2026-10-07 to 08 | 3     | After day 9: an approved request can be revised and its approval stays in force (rules, tests, API, UI and documents in one pull request), reviews of the tests and the backend, the demo script run again by hand        |
+| 2026-10-09       | 1     | After day 9: the worked example in nine steps with a revise while pending, a page that walks it, and the domain test, the demo script and the smoke script aligned to it                                                  |
 
 
