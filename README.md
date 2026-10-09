@@ -33,7 +33,7 @@ The assignment has two stakeholders who disagree. One wants the relationship man
 
 A revision never changes, so the content a reviewer saw cannot change underneath their decision. Every change raises the request's version, and a reviewer who decides from an outdated screen is refused with `409 STALE_VERSION` and has to look at the current revision first.
 
-The manager can also revise while the request is still waiting. Asked at 20 bps and revised to 25 before anyone decided: revision 2 stays without a decision, and a reviewer who still sees 20 bps is refused with `409 STALE_VERSION`. Nobody can approve an amount they have not seen.
+The manager can also revise while the request is still waiting. Declined at 40 bps, revised to 20 and again to 25 before anyone decided: revision 2 stays without a decision, and a reviewer who still sees 20 bps is refused with `409 STALE_VERSION`. Nobody can approve an amount they have not seen.
 
 The negotiation can go on after an approval. Approved at 25 bps, the manager asks for 35: the request is pending again and the mortgage process still reads 25. If the reviewer declines, 25 stays. If a later revision at 30 is approved, the mortgage process reads 30. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is our assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
 

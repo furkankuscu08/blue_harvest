@@ -513,7 +513,8 @@ def test_worked_example_nine_steps():
     alice_revises(3, 25)
 
     # Step 4: carol still sees 20 bps. Wrong: her approval lands on the 25 bps.
-    assert_rejected(
+    assert_rejected_without_change(
+        request,
         ErrorCode.STALE_VERSION,
         lambda: decide(
             request, CAROL, expected_version=3, outcome=Outcome.APPROVED, comment="Fine.", now=T3
