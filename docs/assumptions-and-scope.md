@@ -66,5 +66,6 @@ Each would need to be confirmed as a requirement first. None is assumed to be ne
 | Withdrawing a request | A `WITHDRAWN` status available to the creator. |
 | Reviewer authority limits | Tiered approval based on the size of the discount. |
 | Notifying the mortgage process | An event on approval using an outbox. Not needed while querying the endpoint is enough. |
+| Idempotency keys on revise and decide | The version check already stops a repeated call from taking effect twice; the caller gets `409 STALE_VERSION` and reads the history. Before production, if another system calls these endpoints, they accept the same `Idempotency-Key` and return the first response again. |
 | Expiry of an approval | A validity period, checked when the approved discount is read. |
 | Pagination, filtering, search | Useful once there are more requests than fit on a page. |
