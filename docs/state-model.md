@@ -46,23 +46,26 @@ The "has no request" precondition applies to a new creation. A valid idempotent 
 
 ## Example
 
+Open [story.html](story.html) in a browser to walk these steps.
+
 | Step | Action | Status | Revision | Version |
 |---|---|---|---|---|
-| 1 | Manager creates a request for 35 bps | `PENDING` | 1 | 1 |
+| 1 | Manager creates a request for 40 bps | `PENDING` | 1 | 1 |
 | 2 | Reviewer declines | `DECLINED` | 1 | 2 |
 | 3 | Manager revises to 20 bps | `PENDING` | 2 | 3 |
-| 4 | Reviewer approves | `APPROVED` | 2 | 4 |
+| 4 | Manager revises to 25 bps while the request is still pending | `PENDING` | 3 | 4 |
 
-History after step 4: two revisions and two decisions. The mortgage process reads 20 bps, from revision 2.
+History after step 4: revision 1 was declined, revision 2 was never decided, and revision 3 is waiting. The mortgage process reads nothing. A decision sent with version 3 is refused with `STALE_VERSION`: it cannot approve the 25 bps the reviewer has not seen.
 
 The negotiation can go on after an approval:
 
 | Step | Action | Status | Revision | Version | Approval in force |
 |---|---|---|---|---|---|
-| 5 | Manager revises to 30 bps | `PENDING` | 3 | 5 | 20 bps, revision 2 |
-| 6 | Reviewer declines | `DECLINED` | 3 | 6 | 20 bps, revision 2 |
-| 7 | Manager revises to 25 bps | `PENDING` | 4 | 7 | 20 bps, revision 2 |
-| 8 | Reviewer approves | `APPROVED` | 4 | 8 | 25 bps, revision 4 |
+| 5 | Reviewer approves | `APPROVED` | 3 | 5 | 25 bps, revision 3 |
+| 6 | Manager revises to 35 bps | `PENDING` | 4 | 6 | 25 bps, revision 3 |
+| 7 | Reviewer declines | `DECLINED` | 4 | 7 | 25 bps, revision 3 |
+| 8 | Manager revises to 30 bps | `PENDING` | 5 | 8 | 25 bps, revision 3 |
+| 9 | Reviewer approves | `APPROVED` | 5 | 9 | 30 bps, revision 5 |
 
 ## Invariants
 

@@ -463,7 +463,7 @@ def test_stale_version_is_reported_before_invalid_state():
     )
 
 
-# The worked example in docs/state-model.md
+# A declined request is revised and then approved. The first revision's decision stays.
 
 
 def test_worked_example_decline_revise_approve():

@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The negotiation</title>
+  <style>
+    :root {
+      --bg: #f3f5f8;
+      --surface: #ffffff;
+      --text: #17212f;
+      --muted: #5a6676;
+      --border: #dde3ea;
+      --pending-bg: #fff3d1;
+      --declined-bg: #fde7e7;
+      --approved-bg: #e1f4e6;
+      --accent: #1d5fbf;
+      --readout-bg: #e7f0fb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    main {
+      max-width: 40rem;
+      margin: 0 auto;
+      padding: 28px 16px 48px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    a { color: var(--accent); }
+
+    p { margin: 0; }
+
+    .intro { margin-top: 8px; }
+
+    .control { margin: 24px 0 12px; }
+
+    .control-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 4px 16px;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    label { font-weight: 600; }
+
+    output { color: var(--muted); }
+
+    input[type="range"] {
+      display: block;
+      width: 100%;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .summary { margin: 12px 0 20px; font-weight: 600; }
+
+    .board {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 11.5rem;
+      column-gap: 32px;
+      row-gap: 10px;
+      align-items: center;
+    }
+
+    .version {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .revision {
+      grid-column: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 10px 12px;
+    }
+
+    .revision.is-pending { background: var(--pending-bg); }
+    .revision.is-declined { background: var(--declined-bg); }
+    .revision.is-approved { background: var(--approved-bg); }
+
+    .revision.is-latest,
+    .revision.is-in-force {
+      border-color: var(--text);
+      border-width: 2px;
+    }
+
+    .line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .line + .line { margin-top: 2px; }
+
+    .tag { color: var(--muted); font-size: 13px; }
+
+    .readout {
+      grid-column: 2;
+      grid-row: var(--row);
+      position: relative;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      background: var(--readout-bg);
+      padding: 10px 12px;
+    }
+
+    .readout-label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .readout-value { font-weight: 600; }
+
+    .readout.is-linked::before {
+      content: "";
+      position: absolute;
+      right: 100%;
+      top: 50%;
+      width: 22px;
+      margin-top: -1px;
+      border-top: 2px solid var(--accent);
+    }
+
+    .readout.is-linked::after {
+      content: "";
+      position: absolute;
+      left: -7px;
+      top: 50%;
+      transform: translateY(-50%);
+      border-width: 5px 0 5px 7px;
+      border-style: solid;
+      border-color: transparent transparent transparent var(--accent);
+    }
+
+    @media (max-width: 640px) {
+      .board { grid-template-columns: 1fr; }
+      .readout { grid-column: 1; grid-row: auto; }
+      .readout.is-linked::before,
+      .readout.is-linked::after { content: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>The negotiation</h1>
+    <p class="intro">Status describes the latest revision. The mortgage process reads the approval in force: the approved revision with the highest number. These are the steps in <a href="state-model.md">the state model</a>.</p>
+    <div class="control">
+      <div class="control-head">
+        <label for="step">Story step</label>
+        <output id="step-out" for="step">1 · Manager creates a request for 40 bps</output>
+      </div>
+      <input id="step" type="range" min="1" max="9" step="1" value="1">
+    </div>
+    <p id="summary" class="summary" aria-live="polite">Revision 1 is PENDING. Version 1. No approved discount.</p>
+    <div id="board" class="board" role="group" aria-label="Revisions and the discount the mortgage process reads"></div>
+  </main>
+  <script>
+    const STEPS = [
+      {
+        action: "Manager creates a request for 40 bps",
+        summary: "Revision 1 is PENDING. Version 1. No approved discount.",
+        version: 1,
+        revisions: [{ number: 1, bps: 40, outcome: "PENDING" }],
+        inForce: null,
+      },
+      {
+        action: "Reviewer declines",
+        summary: "Revision 1 is DECLINED. Version 2. No approved discount.",
+        version: 2,
+        revisions: [{ number: 1, bps: 40, outcome: "DECLINED" }],
+        inForce: null,
+      },
+      {
+        action: "Manager revises to 20 bps",
+        summary: "Revision 2 is PENDING. Version 3. No approved discount.",
+        version: 3,
+        revisions: [
+          { number: 1, bps: 40, outcome: "DECLINED" },
+          { number: 2, bps: 20, outcome: "PENDING" },
+        ],
+        inForce: null,
+      },
+      {
+        action: "Manager revises to 25 bps",
+        summary:
+          "Revision 3 is PENDING. Version 4. Revision 2 has no decision. No approved discount. Approving the 20 bps with version 3 is refused with STALE_VERSION.",
+        version: 4,
+        revisions: [
+          { number: 1, bps: 40, outcome: "DECLINED" },
+          { number: 2, bps: 20, outcome: null },
+          { number: 3, bps: 25, outcome: "PENDING" },
+        ],
+        inForce: null,
+      },
+      {
+        action: "Reviewer approves",
+        summary: "Revision 3 is APPROVED. Version 5. The mortgage process reads 25 bps from revision 3.",
+        version: 5,
+        revisions: [
+          { number: 1, bps: 40, outcome: "DECLINED" },
+          { number: 2, bps: 20, outcome: null },
+          { number: 3, bps: 25, outcome: "APPROVED" },
+        ],
+        inForce: { revision: 3, bps: 25 },
+      },
+      {
+        action: "Manager revises to 35 bps",
+        summary:
+          "Revision 4 is PENDING. Version 6. The mortgage process still reads 25 bps from revision 3.",
+        version: 6,
+        revisions: [
+          { number: 1, bps: 40, outcome: "DECLINED" },
+          { number: 2, bps: 20, outcome: null },
+          { number: 3, bps: 25, outcome: "APPROVED" },
+          { number: 4, bps: 35, outcome: "PENDING" },
+        ],
+        inForce: { revision: 3, bps: 25 },
+      },
+      {
+        action: "Reviewer declines",
+        summary:
+          "Revision 4 is DECLINED. Version 7. The mortgage process still reads 25 bps from revision 3.",
+        version: 7,
+        revisions: [
+          { number: 1, bps: 40, outcome: "DECLINED" },
+          { number: 2, bps: 20, outcome: null },
+          { number: 3, bps: 25, outcome: "APPROVED" },
+          { number: 4, bps: 35, outcome: "DECLINED" },
+        ],
+        inForce: { revision: 3, bps: 25 },
+      },
+      {
+        action: "Manager revises to 30 bps",
+        summary:
+          "Revision 5 is PENDING. Version 8. The mortgage process still reads 25 bps from revision 3.",
+        version: 8,
+        revisions: [
+          { number: 1, bps: 40, outcome: "DECLINED" },
+          { number: 2, bps: 20, outcome: null },
+          { number: 3, bps: 25, outcome: "APPROVED" },
+          { number: 4, bps: 35, outcome: "DECLINED" },
+          { number: 5, bps: 30, outcome: "PENDING" },
+        ],
+        inForce: { revision: 3, bps: 25 },
+      },
+      {
+        action: "Reviewer approves",
+        summary: "Revision 5 is APPROVED. Version 9. The mortgage process reads 30 bps from revision 5.",
+        version: 9,
+        revisions: [
+          { number: 1, bps: 40, outcome: "DECLINED" },
+          { number: 2, bps: 20, outcome: null },
+          { number: 3, bps: 25, outcome: "APPROVED" },
+          { number: 4, bps: 35, outcome: "DECLINED" },
+          { number: 5, bps: 30, outcome: "APPROVED" },
+        ],
+        inForce: { revision: 5, bps: 30 },
+      },
+    ];
+
+    const stepInput = document.getElementById("step");
+    const stepOut = document.getElementById("step-out");
+    const summary = document.getElementById("summary");
+    const board = document.getElementById("board");
+
+    function el(tag, attrs, ...children) {
+      const node = document.createElement(tag);
+      for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
+      node.append(...children);
+      return node;
+    }
+
+    function text(tag, className, value) {
+      const node = el(tag, className ? { class: className } : {});
+      node.textContent = value;
+      return node;
+    }
+
+    function line(left, right, rightClass) {
+      const row = el("p", { class: "line" });
+      row.append(text("span", "", left));
+      if (right) row.append(text("span", rightClass || "", right));
+      return row;
+    }
+
+    function render() {
+      const story = STEPS[Number(stepInput.value) - 1];
+      stepOut.textContent = `${stepInput.value} · ${story.action}`;
+      summary.textContent = story.summary;
+      board.replaceChildren(text("p", "version", `Version ${story.version}`));
+
+      const newestFirst = story.revisions.slice().reverse();
+      let forceRow = 2;
+      newestFirst.forEach((revision, index) => {
+        const inForce = story.inForce && revision.number === story.inForce.revision;
+        const classes = ["revision"];
+        if (revision.outcome) classes.push(`is-${revision.outcome.toLowerCase()}`);
+        if (index === 0) classes.push("is-latest");
+        if (inForce) {
+          classes.push("is-in-force");
+          forceRow = index + 2;
+        }
+        const card = el("article", { class: classes.join(" ") });
+        const right = index === 0 && newestFirst.length > 1 ? "Latest" : "";
+        card.append(line(`Revision ${revision.number}`, right, "tag"));
+        card.append(line(`${revision.bps} bps`, revision.outcome || "No decision"));
+        board.append(card);
+      });
+
+      const readout = el("aside", {
+        class: story.inForce ? "readout is-linked" : "readout",
+        style: `--row: ${forceRow}`,
+      });
+      readout.append(text("p", "readout-label", "Mortgage process"));
+      if (story.inForce) {
+        readout.append(text("p", "readout-value", `${story.inForce.bps} bps`));
+        readout.append(text("p", "", `Revision ${story.inForce.revision}`));
+      } else {
+        readout.append(text("p", "readout-value", "No approved discount"));
+      }
+      board.append(readout);
+    }
+
+    stepInput.addEventListener("input", render);
+    render();
+  </script>
+</body>
+</html>

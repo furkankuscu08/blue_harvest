@@ -33,9 +33,9 @@ The assignment has two stakeholders who disagree. One wants the relationship man
 
 A revision never changes, so the content a reviewer saw cannot change underneath their decision. Every change raises the request's version, and a reviewer who decides from an outdated screen is refused with `409 STALE_VERSION` and has to look at the current revision first.
 
-The negotiation can go on after an approval. Approved at 20 bps, the manager asks for 30: the request is pending again and the mortgage process still reads 20. If the reviewer declines, 20 stays. If a later revision at 25 is approved, the mortgage process reads 25. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is our assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
+A revise while the request is still pending leaves no approval to read. Created at 40 bps and declined, then revised to 20 and again to 25 before anyone decides: revision 2 stays without a decision, the request is pending at 25, and the mortgage process reads nothing. A reviewer who still sees 20 bps and sends the old version is refused with `409 STALE_VERSION`. After 25 bps is approved, the manager asks for 35: the request is pending again and the mortgage process still reads 25. If the reviewer declines, 25 stays. If a later revision at 30 is approved, the mortgage process reads 30. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is our assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
 
-More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram and the invariants I1 to I11.
+More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram and the invariants I1 to I11. Open [docs/story.html](docs/story.html) in a browser to walk that example.
 
 ## Requirements and their evidence
 
