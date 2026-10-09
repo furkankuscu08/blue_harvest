@@ -2,7 +2,7 @@
 
 The main story in the browser, with the checks that have no automated test. It follows the example in [state-model.md](state-model.md), which [story.html](story.html) shows step by step.
 
-The steps were run by hand in Google Chrome, against the service in Docker, on 2026-10-05, and steps 1 to 12 again on 2026-10-08; every step gave the expected result. On 2026-10-09 the amounts of the story changed, steps 4 to 6 became a revise under an open review, and the two tabs of one reviewer moved to step 13. Steps 1 to 13 as written here have not been run yet.
+The steps were run by hand in Google Chrome, against the service in Docker, on 2026-10-05, and steps 1 to 12 again on 2026-10-08, with the Requests list also checked in a narrow window; every step gave the expected result. On 2026-10-09 the amounts of the story changed, steps 4 to 6 became a revise under an open review, and the two tabs of one reviewer moved to step 13. Steps 1 to 13 as written here have not been run yet.
 
 Start from the seed data:
 
@@ -21,8 +21,8 @@ Open `http://localhost:8000/`. With `APP_PORT` set, use that port. The acting us
 | 2 | Carol | Open APP-1001, comment, "Decline" | `Declined`, version 2; the comment is next to the current request |
 | 3 | Alice | Open APP-1001, "Revise": 20 bps, a new reason | `Pending`, revision 2, version 3 |
 | 4 | Carol in one tab, Alice in a second | Carol: open APP-1001 and leave it open at 20 bps. Alice: "Revise": 25 bps, a reason | Alice's tab: `Pending`, revision 3, version 4 |
-| 5 | Carol, her tab | Type a comment, "Approve" | "This request changed while you were looking at it", the comment is still there and both buttons are closed |
-| 6 | Carol, her tab | "Reload", then "Approve" | After the reload: 25 bps, revision 3, and revision 2 in the history with "No decision yet." After the approval: `Approved`, version 5 |
+| 5 | Carol, the tab from step 4 | Type a comment, "Approve" | "This request changed while you were looking at it", the comment is still there and both buttons are closed |
+| 6 | Carol, the same tab | "Reload", then "Approve" | After the reload: 25 bps, revision 3, and revision 2 in the history with "No decision yet." After the approval: `Approved`, version 5 |
 | 7 | Mortgage process | Applications | APP-1001: 25 bps, revision 3, approved by Carol |
 
 ## After an approval

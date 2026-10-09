@@ -513,11 +513,12 @@ def test_worked_example_nine_steps():
     alice_revises(3, 25)
 
     # Step 4: carol still sees 20 bps. Wrong: her approval lands on the 25 bps.
-    with pytest.raises(DomainError) as error:
-        decide(
+    assert_rejected(
+        ErrorCode.STALE_VERSION,
+        lambda: decide(
             request, CAROL, expected_version=3, outcome=Outcome.APPROVED, comment="Fine.", now=T3
-        )
-    assert error.value.code == ErrorCode.STALE_VERSION
+        ),
+    )
 
     carol_decides(4, Outcome.APPROVED)
     alice_revises(5, 35)
