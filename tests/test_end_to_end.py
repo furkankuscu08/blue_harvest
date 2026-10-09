@@ -1,4 +1,4 @@
-"""API stories for an approval the mortgage process can read, and for a later revision that does not withdraw it."""
+"""Stories through the API: an approval the mortgage process reads, and what follows it."""
 
 from tests.helpers import create, decide, get, read_discount, revise
 
