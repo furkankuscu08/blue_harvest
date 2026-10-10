@@ -8,14 +8,14 @@ The steps, and who runs each:
 flowchart TD
     subgraph S1["Script, no LLM"]
         A["prove: the mutant breaks<br>exactly its reference tests"]
-        B["prepare: the agent's copy without the reference tests;<br>the remaining tests pass on the mutant too"]
+        B["prepare: the agent's copy without the reference tests,<br>whose remaining tests pass on the mutant too"]
         A --> B
     end
     subgraph S2["Agent: runs no commands, writes only under tests/"]
         C["Reads the change and the rules,<br>writes the missing tests"]
     end
-    subgraph S3["Script, no LLM: no network, a time limit"]
-        D["verify: runs the agent's tests<br>on the baseline and on the mutant"]
+    subgraph S3["Script, no LLM"]
+        D["verify: runs the agent's tests on the baseline and<br>on the mutant, with no network and a time limit"]
         E{"Result for each test"}
         D --> E
         E -->|"passes on the baseline, fails on<br>the mutant with an assertion"| F["caught"]
