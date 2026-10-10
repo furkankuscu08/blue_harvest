@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>The negotiation</title>
+  <title>The worked example</title>
   <style>
     :root {
       --bg: #f3f5f8;
@@ -198,7 +198,7 @@
     }
 
     .screen {
-      border: 1px solid var(--border);
+      border: 2px solid var(--border);
       border-radius: 8px;
       background: var(--surface);
       padding: 10px 12px;
@@ -207,13 +207,11 @@
     .screen.is-pending { background: var(--pending-bg); }
     .screen.is-approved { background: var(--approved-bg); }
 
-    .screen.is-service {
-      border-color: var(--text);
-      border-width: 2px;
-    }
+    .screen.is-service { border-color: var(--text); }
 
     .screen.is-stale {
-      border: 2px dashed var(--muted);
+      border-style: dashed;
+      border-color: var(--muted);
     }
 
     .message {
@@ -253,7 +251,7 @@
     </section>
     <section id="panel-screens" role="tabpanel" aria-labelledby="tab-screens" hidden>
     <h1>Two people, one request</h1>
-    <p class="intro">A screen shows the request as it was when it was last read. It is out of date when its version is lower than the service's, and a decision sent from it is refused. This is what happens at steps 4 and 5 of the negotiation.</p>
+    <p class="intro">A screen shows the request as it was when it was last read. It is out of date when its version is lower than the service's, and a decision sent from it is refused. On the first tab this is step 4, where the manager revises to 25 bps, and step 5, where the reviewer approves.</p>
     <div class="control">
       <div class="control-head">
         <label for="screen-step">Story step</label>
@@ -396,6 +394,7 @@
         manager: REVISED,
         service: REVISED,
         reviewer: OLD,
+        // The UI's own text for a stale version, from app/static/views.js.
         message: "This request changed while you were looking at it. Reload and review it again.",
       },
       {
@@ -473,8 +472,9 @@
       board.append(readout);
     }
 
-    function column(label, seen, service, message) {
+    function column(label, seen, service, { kind, message } = {}) {
       const classes = ["screen", `is-${seen.status.toLowerCase()}`];
+      if (kind) classes.push(kind);
       const stale = seen.version < service.version;
       if (stale) classes.push("is-stale");
       const card = el("article", { class: classes.join(" ") });
@@ -488,20 +488,16 @@
     }
 
     function drawScreens(story) {
-      const service = column("Service", story.service, story.service);
-      service.lastChild.classList.add("is-service");
       screens.replaceChildren(
         column("Manager's screen", story.manager, story.service),
-        service,
-        column("Reviewer's screen", story.reviewer, story.service, story.message),
+        column("Service", story.service, story.service, { kind: "is-service" }),
+        column("Reviewer's screen", story.reviewer, story.service, { message: story.message }),
       );
     }
 
     // A slider that walks a list of steps.
-    function walk(name, steps, draw) {
-      const input = document.getElementById(`${name}step`);
-      const out = document.getElementById(`${name}step-out`);
-      const summary = document.getElementById(`${name}summary`);
+    function walk(ids, steps, draw) {
+      const [input, out, summary] = ids.map((id) => document.getElementById(id));
       function render() {
         const story = steps[Number(input.value) - 1];
         out.textContent = `${input.value} · ${story.action}`;
@@ -512,8 +508,8 @@
       render();
     }
 
-    walk("", STEPS, drawBoard);
-    walk("screen-", SCREEN_STEPS, drawScreens);
+    walk(["step", "step-out", "summary"], STEPS, drawBoard);
+    walk(["screen-step", "screen-step-out", "screen-summary"], SCREEN_STEPS, drawScreens);
 
     const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
 

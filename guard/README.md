@@ -12,7 +12,7 @@ flowchart TD
         A --> B
     end
     subgraph S2["Agent: runs no commands, writes only under tests/"]
-        C["Reads the change and the rules,<br>writes the missing tests"]
+        C["Started by generate.py with restricted permissions.<br>Reads the change and the rules,<br>writes the missing tests"]
     end
     subgraph S3["Script, no LLM"]
         D["verify: runs the agent's tests on the baseline and<br>on the mutant, with no network and a time limit"]

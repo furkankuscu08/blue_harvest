@@ -23,7 +23,7 @@ SQLite rules: `PRAGMA foreign_keys=ON` and `busy_timeout` on every connection, W
 
 ## Schedule
 
-All nine days are done; the API, the UI, the agent experiment and the README are complete. One change of behaviour and a new worked example followed; see [Changes and why](#changes-and-why).
+All nine days are done; the API, the UI, the agent experiment and the README are complete. One change of behaviour, a new worked example and three pictures followed; see [Changes and why](#changes-and-why).
 
 
 | Day         | Hours | Outcome                                                                                      | Done when |
