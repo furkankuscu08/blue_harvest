@@ -55,7 +55,7 @@ sequenceDiagram
     Note over S: The approval is bound to revision 3, 25 bps
 ```
 
-The negotiation can go on after an approval. Approved at 25 bps, the manager asks for 35: the request is pending again and the mortgage process still reads 25. If the reviewer declines, 25 stays. If a later revision at 30 is approved, the mortgage process reads 30. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is our assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
+The negotiation can go on after an approval. Approved at 25 bps, the manager asks for 35: the request is pending again and the mortgage process still reads 25. If the reviewer declines, 25 stays. If a later revision at 30 is approved, the mortgage process reads 30. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is my assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
 
 More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram, the invariants I1 to I11 and this example in nine steps. [docs/story.html](docs/story.html) walks the nine steps one at a time and, on its second tab, shows what the manager and the reviewer each see while a decision is refused as stale; GitHub shows its source, so open the file from a clone in a browser.
 
@@ -75,7 +75,7 @@ R1 to R6 are the requirements of the assignment, as numbered in [docs/assumption
 
 ## Assumptions and scope
 
-None of these is stated in the assignment. They are our choices, and each would be confirmed with the client.
+None of these is stated in the assignment. They are my choices, and each would be confirmed with the client.
 
 - **A1:** an application has at most one pricing exception request.
 - **A2:** four-eyes: whoever created a request cannot decide on it.
@@ -83,7 +83,7 @@ None of these is stated in the assignment. They are our choices, and each would 
 - **A7:** the caller is identified by the `X-User-Id` header. This is not authentication.
 - **A10:** a new revision does not withdraw the approval in force; a later approval replaces it.
 
-All ten assumptions, each with what changes if it is wrong, and the features we deliberately did not build (cancelling an approved discount, withdrawing, authority limits, notifications, expiry, pagination) are in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md).
+All ten assumptions, each with what changes if it is wrong, and the features I deliberately did not build (cancelling an approved discount, withdrawing, authority limits, notifications, expiry, pagination) are in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md).
 
 ## Tests
 
@@ -97,7 +97,7 @@ pytest
 
 222 tests. The main levels: the business rules on their own (`test_domain.py`), every endpoint against a real SQLite file, concurrent changes to one request (`test_api_concurrency.py`), and the three main stories from create to the downstream read (`test_end_to_end.py`). The rest cover the tables, the SQLite settings, the seed data and the serving of the UI. CI runs lint, the tests and a dependency audit in one job, and in a second job builds the Docker image and calls it. The UI has no automated browser tests; it was checked by hand with [docs/demo-script.md](docs/demo-script.md).
 
-All commands are in [AGENTS.md](AGENTS.md#commands). The endpoints, error codes and order of checks are in [docs/api-contract.md](docs/api-contract.md), the UI's rules in [docs/ui-design.md](docs/ui-design.md).
+To continue the work, start with [AGENTS.md](AGENTS.md): it names the documents that define the behaviour and holds the workflow, the rules and all [commands](AGENTS.md#commands). The endpoints, error codes and order of checks are in [docs/api-contract.md](docs/api-contract.md), the UI's rules in [docs/ui-design.md](docs/ui-design.md).
 
 ## Working with AI agents
 
@@ -110,7 +110,7 @@ I built this with AI agents: Claude Code as the builder and other models as inde
 
 ### The invariant guard
 
-The bonus demonstration, in [guard/](guard/README.md), which starts with a flowchart of one experiment and who runs each step. The problem: a change can break a business rule while every existing test stays green. An agent reads the change and the rules and writes the missing regression tests. To measure whether that works, we break one rule on purpose, hide the tests that would catch it, and let a script without any LLM run the agent's tests on the correct and on the broken code.
+The bonus demonstration, in [guard/](guard/README.md), which starts with a flowchart of one experiment and who runs each step. The problem: a change can break a business rule while every existing test stays green. An agent reads the change and the rules and writes the missing regression tests. To measure whether that works, I break one rule on purpose, hide the tests that would catch it, and let a script without any LLM run the agent's tests on the correct and on the broken code.
 
 | Run | Rule broken | Result |
 |---|---|---|
@@ -137,7 +137,7 @@ What a client needs on top, and this exercise does not have: an approved list of
 ## Before production
 
 - **Authentication.** Identity comes from the client's identity provider, with trusted role assignment. The role, ownership and four-eyes checks stay as they are.
-- **PostgreSQL instead of SQLite.** This is more than a new connection string. The service relies on SQLite taking the write lock when a transaction begins. PostgreSQL needs a row lock (`SELECT ... FOR UPDATE`) or an update that only succeeds for the expected version, and the concurrency tests have to pass there. On SQLite without that lock, with the driver's default transactions, we measured both of two concurrent changes succeeding, which left a request `APPROVED` while its latest revision had no decision.
+- **PostgreSQL instead of SQLite.** This is more than a new connection string. The service relies on SQLite taking the write lock when a transaction begins. PostgreSQL needs a row lock (`SELECT ... FOR UPDATE`) or an update that only succeeds for the expected version, and the concurrency tests have to pass there. On SQLite without that lock, with the driver's default transactions, I measured both of two concurrent changes succeeding, which left a request `APPROVED` while its latest revision had no decision.
 - **Managed migrations** instead of creating the tables at start.
 - **Automated browser tests** for the main flows.
 
@@ -145,7 +145,6 @@ What a client needs on top, and this exercise does not have: an approved list of
 
 - The `X-User-Id` header selects a seeded user. Anyone can act as anyone.
 - SQLite allows one writer at a time. That is enough here and not for a busy service.
-- The UI has no automated browser tests. Tests cover how the page and its files are served; what the page does was checked by hand.
 - A response that is lost after the request was stored cannot be produced reliably by hand in a browser. The replay is proven by the API tests and the smoke script, not by the UI check.
 - The UI keeps the idempotency key in the page only. After a page reload, sending the same create again gets `REQUEST_ALREADY_EXISTS` if the earlier one was stored, and the UI links to the existing request.
 - Applications and users are seed data. Only `APP-1001` starts without a request, so a second create needs a seed reset.
@@ -156,7 +155,6 @@ What a client needs on top, and this exercise does not have: an approved list of
 ## With more time
 
 - After a seed reset, a screen that was already open still shows a request that no longer exists; a decision there gets "No request with this id." and the old screen stays. The API has no delete, so only a reset causes it.
-- Browser tests for the main story and the stale version in two tabs.
 - Calibrating the guard's script on API tests; today its known-answer samples are domain tests.
 
 ## Time spent
