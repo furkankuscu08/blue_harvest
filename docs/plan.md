@@ -174,6 +174,7 @@ Day 9 added no behaviour. What changed later is described under [Changes and why
 - `story.html` has a second tab: the manager's screen, the service and the reviewer's screen side by side, for steps 4 and 5 of the example. A screen is marked as out of date while its version is lower than the service's.
 - The README says where the project was run: Ubuntu under WSL2 and in CI, not macOS or native Windows. `.gitattributes` keeps shell scripts on LF line endings, because a Windows checkout can otherwise give `scripts/smoke.sh` CRLF endings that bash cannot run. Neither platform was tried.
 - A last read of the README against the assignment: it says "I" throughout, the missing browser tests are named in two sections instead of four, and it tells the next engineer to start with `AGENTS.md`.
+- `AGENTS.md` names `demo-script.md` and `story.html`, says that the page and the README's sequence diagram repeat the example's numbers, and opens as the starting point for an engineer too.
 - No behaviour changed, and no check was added.
 
 
