@@ -35,6 +35,26 @@ A revision never changes, so the content a reviewer saw cannot change underneath
 
 The manager can also revise while the request is still waiting. Declined at 40 bps, revised to 20 and again to 25 before anyone decided: revision 2 stays without a decision, and a reviewer who still sees 20 bps is refused with `409 STALE_VERSION`. Nobody can approve an amount they have not seen.
 
+```mermaid
+sequenceDiagram
+    actor Alice as Alice, manager
+    participant S as Service
+    actor Carol as Carol, reviewer
+    Note over S: Revision 2, 20 bps, version 3
+    Carol->>S: read the request
+    S-->>Carol: 20 bps, version 3
+    Alice->>S: revise to 25 bps, expected_version 3
+    S-->>Alice: 201, revision 3, version 4
+    Carol->>S: approve, expected_version 3
+    S--xCarol: 409 STALE_VERSION
+    Note over S: Nothing changed
+    Carol->>S: read the request again
+    S-->>Carol: 25 bps, version 4
+    Carol->>S: approve, expected_version 4
+    S-->>Carol: 201, APPROVED, version 5
+    Note over S: The approval is bound to revision 3, 25 bps
+```
+
 The negotiation can go on after an approval. Approved at 25 bps, the manager asks for 35: the request is pending again and the mortgage process still reads 25. If the reviewer declines, 25 stays. If a later revision at 30 is approved, the mortgage process reads 30. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is our assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
 
 More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram, the invariants I1 to I11 and this example in nine steps. [docs/story.html](docs/story.html) walks the nine steps one at a time; GitHub shows its source, so open the file from a clone in a browser.
