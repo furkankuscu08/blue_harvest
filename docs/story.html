@@ -207,11 +207,19 @@
     .screen.is-pending { background: var(--pending-bg); }
     .screen.is-approved { background: var(--approved-bg); }
 
-    .screen.is-service { border-color: var(--text); }
-
     .screen.is-stale {
       border-style: dashed;
       border-color: var(--muted);
+    }
+
+    .fresh {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .screen.is-stale .fresh {
+      color: var(--text);
+      font-weight: 600;
     }
 
     .message {
@@ -251,7 +259,7 @@
     </section>
     <section id="panel-screens" role="tabpanel" aria-labelledby="tab-screens" hidden>
     <h1>Two people, one request</h1>
-    <p class="intro">A screen shows the request as it was when it was last read. It is out of date when its version is lower than the service's, and a decision sent from it is refused. On the first tab this is step 4, where the manager revises to 25 bps, and step 5, where the reviewer approves.</p>
+    <p class="intro">A screen is out of date when its version is lower than the service's, and a decision sent from it is refused.</p>
     <div class="control">
       <div class="control-head">
         <label for="screen-step">Story step</label>
@@ -388,7 +396,7 @@
         reviewer: OLD,
       },
       {
-        action: "Reviewer approves the 20 bps",
+        action: "Reviewer tries to approve the 20 bps",
         summary:
           "The decision carries version 3. The service is at version 4, refuses it with STALE_VERSION and changes nothing.",
         manager: REVISED,
@@ -407,7 +415,7 @@
       {
         action: "Reviewer approves the 25 bps",
         summary:
-          "The decision carries version 4 and is accepted. Revision 3 is APPROVED. Version 5. The manager's screen is out of date until it is reloaded.",
+          "The decision carries version 4 and is accepted. The manager's screen is now out of date.",
         manager: REVISED,
         service: APPROVED,
         reviewer: APPROVED,
@@ -472,13 +480,14 @@
       board.append(readout);
     }
 
-    function column(label, seen, service, { kind, message } = {}) {
+    const STALE = "Out of date";
+
+    function column(label, seen, fresh, message) {
       const classes = ["screen", `is-${seen.status.toLowerCase()}`];
-      if (kind) classes.push(kind);
-      const stale = seen.version < service.version;
-      if (stale) classes.push("is-stale");
+      if (fresh === STALE) classes.push("is-stale");
       const card = el("article", { class: classes.join(" ") });
-      card.append(line(`Revision ${seen.revision}`, stale ? "Out of date" : "", "tag"));
+      card.append(text("p", "fresh", fresh));
+      card.append(line(`Revision ${seen.revision}`));
       card.append(line(`${seen.bps} bps`, seen.status));
       card.append(line(`Version ${seen.version}`));
       if (message) card.append(text("p", "message", message));
@@ -488,10 +497,11 @@
     }
 
     function drawScreens(story) {
+      const fresh = (seen) => (seen.version < story.service.version ? STALE : "Up to date");
       screens.replaceChildren(
-        column("Manager's screen", story.manager, story.service),
-        column("Service", story.service, story.service, { kind: "is-service" }),
-        column("Reviewer's screen", story.reviewer, story.service, { message: story.message }),
+        column("Manager's screen", story.manager, fresh(story.manager)),
+        column("Service", story.service, "Current state"),
+        column("Reviewer's screen", story.reviewer, fresh(story.reviewer), story.message),
       );
     }
 

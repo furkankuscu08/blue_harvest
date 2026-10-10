@@ -2,28 +2,24 @@
 
 An agent reviews a pull request against the domain rules and writes the regression tests that are missing. To check whether it works, we break one rule on purpose (a mutant), hide the tests that would catch it, and measure whether the agent's tests catch it. Writing the tests needs an LLM. Checking them does not.
 
-The steps, and who runs each:
+One experiment, and who runs each step. `generate.py` starts the agent, which cannot run commands and writes only under `tests/`.
 
 ```mermaid
 flowchart TD
     subgraph S1["Script, no LLM"]
-        A["prove: the mutant breaks<br>exactly its reference tests"]
-        B["prepare: the agent's copy without the reference tests,<br>whose remaining tests pass on the mutant too"]
-        A --> B
+        A["prove"] --> B["prepare"]
     end
-    subgraph S2["Agent: runs no commands, writes only under tests/"]
-        C["Started by generate.py with restricted permissions.<br>Reads the change and the rules,<br>writes the missing tests"]
+    subgraph S2["Agent, an LLM"]
+        C["writes the missing tests"]
     end
     subgraph S3["Script, no LLM"]
-        D["verify: runs the agent's tests on the baseline and<br>on the mutant, with no network and a time limit"]
-        E{"Result for each test"}
-        D --> E
-        E -->|"passes on the baseline, fails on<br>the mutant with an assertion"| F["caught"]
+        D["verify"] --> E{"each test"}
+        E -->|"fails only on the mutant"| F["caught"]
         E -->|"passes on both"| G["missed"]
-        E -->|"anything else, or the agent<br>changed an existing file"| H["invalid run"]
+        E -->|"anything else"| H["invalid run"]
     end
     subgraph S4["Person"]
-        I["Confirms the assertion is<br>about the rule the mutant breaks"]
+        I["checks why each caught test fails"]
     end
     B --> C --> D
     F --> I

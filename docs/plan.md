@@ -169,7 +169,7 @@ Day 9 added no behaviour. What changed later is described under [Changes and why
 
 **After day 9 (2026-10-10), three pictures.**
 
-- `guard/README.md` has a flowchart of the experiment: which steps a script runs without an LLM, what the agent may do, and what a person confirms.
+- `guard/README.md` has a flowchart of the experiment: which steps a script runs without an LLM, which one the agent does, and what a person checks.
 - The README shows the refused stale approval as a sequence diagram, next to the paragraph that describes it. Both diagrams are Mermaid, which GitHub draws; `story.html` is only visible from a clone.
 - `story.html` has a second tab: the manager's screen, the service and the reviewer's screen side by side, for steps 4 and 5 of the example. A screen is marked as out of date while its version is lower than the service's.
 - No behaviour changed, and no check was added.
