@@ -110,7 +110,7 @@ I built this with AI agents: Claude Code as the builder and other models as inde
 
 ### The invariant guard
 
-The bonus demonstration, in [guard/](guard/README.md). The problem: a change can break a business rule while every existing test stays green. An agent reads the change and the rules and writes the missing regression tests. To measure whether that works, we break one rule on purpose, hide the tests that would catch it, and let a script without any LLM run the agent's tests on the correct and on the broken code.
+The bonus demonstration, in [guard/](guard/README.md), which starts with a flowchart of one experiment and who runs each step. The problem: a change can break a business rule while every existing test stays green. An agent reads the change and the rules and writes the missing regression tests. To measure whether that works, we break one rule on purpose, hide the tests that would catch it, and let a script without any LLM run the agent's tests on the correct and on the broken code.
 
 | Run | Rule broken | Result |
 |---|---|---|
