@@ -1,6 +1,6 @@
 # Working plan
 
-The current plan, last updated on 2026-10-09, after the changes that followed day 9. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
+The current plan, last updated on 2026-10-10, after the changes that followed day 9. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
 
 The plan covers how the work is organised. What the service does is defined in [state-model.md](state-model.md), [api-contract.md](api-contract.md) and [assumptions-and-scope.md](assumptions-and-scope.md); those documents win over this one.
 
@@ -39,9 +39,10 @@ All nine days are done; the API, the UI, the agent experiment and the README are
 | 9           | 2     | README, contract clean-up, recorded demo                                                     | Done      |
 | After day 9 | 3     | An approved request can be revised                                                           | Done      |
 | After day 9 | 1     | The worked example in nine steps, with a page that walks it                                  | Done      |
+| After day 9 | 2     | Three pictures: the guard's steps, the refused stale approval, a second tab on the page      | Done      |
 
 
-Spent, including 5 hours of planning: 32 hours.
+Spent, including 5 hours of planning: 34 hours.
 
 ### Day 6: UI
 
@@ -166,6 +167,13 @@ Day 9 added no behaviour. What changed later is described under [Changes and why
 - One example everywhere: the domain test walks the nine steps, the demo script follows them in the browser, and the smoke script runs the first five. The smoke script got one check for this, 24 in total.
 - Two earlier rules are gone, because more revisions will follow: the smoke script takes new checks when the story changes, and new behaviour after day 9 no longer needs an exception. Each change is still recorded here.
 
+**After day 9 (2026-10-10), three pictures.**
+
+- `guard/README.md` has a flowchart of the experiment: which steps a script runs without an LLM, what the agent may do, and what a person confirms.
+- The README shows the refused stale approval as a sequence diagram, next to the paragraph that describes it. Both diagrams are Mermaid, which GitHub draws; `story.html` is only visible from a clone.
+- `story.html` has a second tab: the manager's screen, the service and the reviewer's screen side by side, for steps 4 and 5 of the example. A screen is marked as out of date while its version is lower than the service's.
+- No behaviour changed, and no check was added.
+
 
 
 ## Time log
@@ -185,5 +193,6 @@ Day 9 added no behaviour. What changed later is described under [Changes and why
 | 2026-10-05       | 2     | Day 9: the API contract without its repetitions, the README with the traceability table, two review rounds of the README, the demo script result recorded                                                                 |
 | 2026-10-07 to 08 | 3     | After day 9: an approved request can be revised and its approval stays in force (rules, tests, API, UI and documents in one pull request), reviews of the tests and the backend, the demo script run again by hand        |
 | 2026-10-09       | 1     | After day 9: the worked example in nine steps with a revise while pending, a page that walks it, and the domain test, the demo script and the smoke script aligned to it                                                  |
+| 2026-10-10       | 2     | After day 9: three pictures, a flowchart of the guard experiment, a sequence diagram of the refused stale approval in the README, and a second tab on the story page                                                      |
 
 
