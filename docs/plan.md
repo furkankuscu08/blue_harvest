@@ -172,6 +172,7 @@ Day 9 added no behaviour. What changed later is described under [Changes and why
 - `guard/README.md` has a flowchart of the experiment: which steps a script runs without an LLM, which one the agent does, and what a person checks.
 - The README shows the refused stale approval as a sequence diagram, next to the paragraph that describes it. Both diagrams are Mermaid, which GitHub draws; `story.html` is only visible from a clone.
 - `story.html` has a second tab: the manager's screen, the service and the reviewer's screen side by side, for steps 4 and 5 of the example. A screen is marked as out of date while its version is lower than the service's.
+- The README says where the project was run: Ubuntu under WSL2 and in CI, not macOS or native Windows. `.gitattributes` keeps shell scripts on LF line endings, because a Windows checkout can otherwise give `scripts/smoke.sh` CRLF endings that bash cannot run. Neither platform was tried.
 - No behaviour changed, and no check was added.
 
 

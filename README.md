@@ -6,7 +6,7 @@ The repository holds an HTTP API, a browser UI on top of it, and an experiment i
 
 ## Try it in five minutes
 
-Requires Docker.
+Requires Docker. Built and checked on Ubuntu under WSL2 and on Ubuntu in CI; not tried on macOS or native Windows. The Docker commands are the same there; `scripts/smoke.sh` and the `APP_PORT=8001` prefix need a bash shell.
 
 ```bash
 docker compose up --build -d --wait
