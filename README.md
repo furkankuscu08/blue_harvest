@@ -57,7 +57,7 @@ sequenceDiagram
 
 The negotiation can go on after an approval. Approved at 25 bps, the manager asks for 35: the request is pending again and the mortgage process still reads 25. If the reviewer declines, 25 stays. If a later revision at 30 is approved, the mortgage process reads 30. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is our assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
 
-More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram, the invariants I1 to I11 and this example in nine steps. [docs/story.html](docs/story.html) walks the nine steps one at a time and, in a second tab, shows what the manager and the reviewer each see while a decision is refused as stale; GitHub shows its source, so open the file from a clone in a browser.
+More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram, the invariants I1 to I11 and this example in nine steps. [docs/story.html](docs/story.html) walks the nine steps one at a time and, on its second tab, shows what the manager and the reviewer each see while a decision is refused as stale; GitHub shows its source, so open the file from a clone in a browser.
 
 ## Requirements and their evidence
 

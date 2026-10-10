@@ -14,9 +14,9 @@ flowchart TD
     end
     subgraph S3["Script, no LLM"]
         D["verify"] --> E{"each test"}
-        E -->|"fails only on the mutant"| F["caught"]
+        E -->|"fails on the mutant with an assertion"| F["caught"]
         E -->|"passes on both"| G["missed"]
-        E -->|"anything else"| H["invalid run"]
+        E -->|"anything else, or a changed file"| H["invalid run"]
     end
     subgraph S4["Person"]
         I["checks why each caught test fails"]

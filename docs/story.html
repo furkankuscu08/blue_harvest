@@ -262,7 +262,7 @@
     <p class="intro">A screen is out of date when its version is lower than the service's, and a decision sent from it is refused.</p>
     <div class="control">
       <div class="control-head">
-        <label for="screen-step">Story step</label>
+        <label for="screen-step">Moment</label>
         <output id="screen-step-out" for="screen-step">1 · Reviewer opens the request</output>
       </div>
       <input id="screen-step" type="range" min="1" max="5" step="1" value="1">
@@ -404,6 +404,7 @@
         reviewer: OLD,
         // The UI's own text for a stale version, from app/static/views.js.
         message: "This request changed while you were looking at it. Reload and review it again.",
+        refusal: "Refused with 409 STALE_VERSION. Nothing changed.",
       },
       {
         action: "Reviewer reloads",
@@ -480,13 +481,12 @@
       board.append(readout);
     }
 
-    const STALE = "Out of date";
+    const FRESHNESS = { current: "Current state", fresh: "Up to date", stale: "Out of date" };
 
-    function column(label, seen, fresh, message) {
-      const classes = ["screen", `is-${seen.status.toLowerCase()}`];
-      if (fresh === STALE) classes.push("is-stale");
+    function column(label, seen, freshness, message) {
+      const classes = ["screen", `is-${seen.status.toLowerCase()}`, `is-${freshness}`];
       const card = el("article", { class: classes.join(" ") });
-      card.append(text("p", "fresh", fresh));
+      card.append(text("p", "fresh", FRESHNESS[freshness]));
       card.append(line(`Revision ${seen.revision}`));
       card.append(line(`${seen.bps} bps`, seen.status));
       card.append(line(`Version ${seen.version}`));
@@ -497,11 +497,11 @@
     }
 
     function drawScreens(story) {
-      const fresh = (seen) => (seen.version < story.service.version ? STALE : "Up to date");
+      const freshnessOf = (seen) => (seen.version < story.service.version ? "stale" : "fresh");
       screens.replaceChildren(
-        column("Manager's screen", story.manager, fresh(story.manager)),
-        column("Service", story.service, "Current state"),
-        column("Reviewer's screen", story.reviewer, fresh(story.reviewer), story.message),
+        column("Manager's screen", story.manager, freshnessOf(story.manager)),
+        column("Service", story.service, "current", story.refusal),
+        column("Reviewer's screen", story.reviewer, freshnessOf(story.reviewer), story.message),
       );
     }
 
