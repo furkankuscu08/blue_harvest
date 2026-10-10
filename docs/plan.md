@@ -175,6 +175,7 @@ Day 9 added no behaviour. What changed later is described under [Changes and why
 - The README says where the project was run: Ubuntu under WSL2 and in CI, not macOS or native Windows. `.gitattributes` keeps shell scripts on LF line endings, because a Windows checkout can otherwise give `scripts/smoke.sh` CRLF endings that bash cannot run. Neither platform was tried.
 - A last read of the README against the assignment: it says "I" throughout, the missing browser tests are named in two sections instead of four, and it tells the next engineer to start with `AGENTS.md`.
 - `AGENTS.md` names `demo-script.md` and `story.html`, says that the page and the README's sequence diagram repeat the example's numbers, and opens as the starting point for an engineer too.
+- The README says that GitHub does not enforce the merge gate, because branch protection is not available for a private repository on a free account, and lists the protection of `main` under "Before production".
 - No behaviour changed, and no check was added.
 
 

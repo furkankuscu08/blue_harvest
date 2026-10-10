@@ -140,6 +140,7 @@ What a client needs on top, and this exercise does not have: an approved list of
 - **PostgreSQL instead of SQLite.** This is more than a new connection string. The service relies on SQLite taking the write lock when a transaction begins. PostgreSQL needs a row lock (`SELECT ... FOR UPDATE`) or an update that only succeeds for the expected version, and the concurrency tests have to pass there. On SQLite without that lock, with the driver's default transactions, I measured both of two concurrent changes succeeding, which left a request `APPROVED` while its latest revision had no decision.
 - **Managed migrations** instead of creating the tables at start.
 - **Automated browser tests** for the main flows.
+- **Branch protection on `main`.** A pull request for every change, the `test` and `docker` checks required, no force push and no deletion.
 
 ## Known limits
 
@@ -150,6 +151,7 @@ What a client needs on top, and this exercise does not have: an approved list of
 - Applications and users are seed data. Only `APP-1001` starts without a request, so a second create needs a seed reset.
 - Idempotency records do not expire. Only a seed reset removes them.
 - A reviewer cannot cancel an approval. Declining a new revision leaves the earlier approval in force, and an approval has no end date.
+- GitHub does not enforce the merge gate: branch protection is not available for a private repository on a free account. The gate is a working rule, that nothing is merged before CI passes on the head commit.
 - The guard experiment covers two deliberately created gaps.
 
 ## With more time
