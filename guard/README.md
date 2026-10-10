@@ -2,6 +2,29 @@
 
 An agent reviews a pull request against the domain rules and writes the regression tests that are missing. To check whether it works, we break one rule on purpose (a mutant), hide the tests that would catch it, and measure whether the agent's tests catch it. Writing the tests needs an LLM. Checking them does not.
 
+One experiment, and who runs each step. `generate.py` starts the agent, which cannot run commands and writes only under `tests/`.
+
+```mermaid
+flowchart TD
+    subgraph S1["Script, no LLM"]
+        A["prove"] --> B["prepare"]
+    end
+    subgraph S2["Agent, an LLM"]
+        C["writes the missing tests"]
+    end
+    subgraph S3["Script, no LLM"]
+        D["verify"] --> E{"each test"}
+        E -->|"fails on the mutant with an assertion"| F["caught"]
+        E -->|"passes on both"| G["missed"]
+        E -->|"anything else, or a changed file"| H["invalid run"]
+    end
+    subgraph S4["Person"]
+        I["checks why each caught test fails"]
+    end
+    B --> C --> D
+    F --> I
+```
+
 Requires Docker. Run from the repository root. The commands take the name of a mutant; the examples use the first one.
 
 ```bash

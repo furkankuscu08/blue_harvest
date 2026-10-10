@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>The negotiation</title>
+  <title>The worked example</title>
   <style>
     :root {
       --bg: #f3f5f8;
@@ -159,7 +159,78 @@
       border-color: transparent transparent transparent var(--accent);
     }
 
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 20px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tabs button {
+      margin: 0 0 -1px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: none;
+      padding: 8px 2px;
+      color: var(--muted);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .tabs button[aria-selected="true"] {
+      border-bottom-color: var(--accent);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .screens {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+
+    .screen-label {
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .screen {
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 10px 12px;
+    }
+
+    .screen.is-pending { background: var(--pending-bg); }
+    .screen.is-approved { background: var(--approved-bg); }
+
+    .screen.is-stale {
+      border-style: dashed;
+      border-color: var(--muted);
+    }
+
+    .fresh {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .screen.is-stale .fresh {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .message {
+      margin-top: 8px;
+      border-top: 1px solid var(--muted);
+      padding-top: 8px;
+      font-size: 14px;
+    }
+
     @media (max-width: 640px) {
+      .screens { grid-template-columns: 1fr; }
       .board { grid-template-columns: 1fr; }
       .readout { grid-column: 1; grid-row: auto; }
       .readout.is-linked::before,
@@ -169,6 +240,11 @@
 </head>
 <body>
   <main>
+    <div class="tabs" role="tablist" aria-label="Stories">
+      <button type="button" role="tab" id="tab-negotiation" aria-controls="panel-negotiation" aria-selected="true">The negotiation</button>
+      <button type="button" role="tab" id="tab-screens" aria-controls="panel-screens" aria-selected="false" tabindex="-1">Two people, one request</button>
+    </div>
+    <section id="panel-negotiation" role="tabpanel" aria-labelledby="tab-negotiation">
     <h1>The negotiation</h1>
     <p class="intro">Status describes the latest revision. The mortgage process reads the approval in force: the approved revision with the highest number. These are the steps in <a href="state-model.md">the state model</a>.</p>
     <div class="control">
@@ -180,6 +256,20 @@
     </div>
     <p id="summary" class="summary" aria-live="polite">Revision 1 is PENDING. Version 1. No approved discount.</p>
     <div id="board" class="board" role="group" aria-label="Revisions and the discount the mortgage process reads"></div>
+    </section>
+    <section id="panel-screens" role="tabpanel" aria-labelledby="tab-screens" hidden>
+    <h1>Two people, one request</h1>
+    <p class="intro">A screen is out of date when its version is lower than the service's, and a decision sent from it is refused.</p>
+    <div class="control">
+      <div class="control-head">
+        <label for="screen-step">Moment</label>
+        <output id="screen-step-out" for="screen-step">1 · Reviewer opens the request</output>
+      </div>
+      <input id="screen-step" type="range" min="1" max="5" step="1" value="1">
+    </div>
+    <p id="screen-summary" class="summary" aria-live="polite">Both screens show what the service holds: revision 2, 20 bps, version 3.</p>
+    <div id="screens" class="screens" role="group" aria-label="The manager's screen, the service and the reviewer's screen"></div>
+    </section>
   </main>
   <script>
     const STEPS = [
@@ -285,10 +375,56 @@
       },
     ];
 
-    const stepInput = document.getElementById("step");
-    const stepOut = document.getElementById("step-out");
-    const summary = document.getElementById("summary");
+    // What each screen last read, next to what the service holds.
+    const OLD = { revision: 2, bps: 20, status: "PENDING", version: 3 };
+    const REVISED = { revision: 3, bps: 25, status: "PENDING", version: 4 };
+    const APPROVED = { revision: 3, bps: 25, status: "APPROVED", version: 5 };
+    const SCREEN_STEPS = [
+      {
+        action: "Reviewer opens the request",
+        summary: "Both screens show what the service holds: revision 2, 20 bps, version 3.",
+        manager: OLD,
+        service: OLD,
+        reviewer: OLD,
+      },
+      {
+        action: "Manager revises to 25 bps",
+        summary:
+          "The service is at version 4. The reviewer's screen still shows 20 bps at version 3.",
+        manager: REVISED,
+        service: REVISED,
+        reviewer: OLD,
+      },
+      {
+        action: "Reviewer tries to approve the 20 bps",
+        summary:
+          "The decision carries version 3. The service is at version 4, refuses it with STALE_VERSION and changes nothing.",
+        manager: REVISED,
+        service: REVISED,
+        reviewer: OLD,
+        // The UI's own text for a stale version, from app/static/views.js.
+        message: "This request changed while you were looking at it. Reload and review it again.",
+        refusal: "Refused with 409 STALE_VERSION. Nothing changed.",
+      },
+      {
+        action: "Reviewer reloads",
+        summary: "The reviewer now sees revision 3, 25 bps, version 4.",
+        manager: REVISED,
+        service: REVISED,
+        reviewer: REVISED,
+      },
+      {
+        action: "Reviewer approves the 25 bps",
+        summary:
+          "The decision carries version 4 and is accepted. The manager's screen is now out of date.",
+        manager: REVISED,
+        service: APPROVED,
+        reviewer: APPROVED,
+      },
+    ];
+
     const board = document.getElementById("board");
+    const screens = document.getElementById("screens");
 
     function el(tag, attrs, ...children) {
       const node = document.createElement(tag);
@@ -310,10 +446,7 @@
       return row;
     }
 
-    function render() {
-      const story = STEPS[Number(stepInput.value) - 1];
-      stepOut.textContent = `${stepInput.value} · ${story.action}`;
-      summary.textContent = story.summary;
+    function drawBoard(story) {
       board.replaceChildren(text("p", "version", `Version ${story.version}`));
 
       const newestFirst = story.revisions.slice().reverse();
@@ -348,8 +481,70 @@
       board.append(readout);
     }
 
-    stepInput.addEventListener("input", render);
-    render();
+    const FRESHNESS = { current: "Current state", fresh: "Up to date", stale: "Out of date" };
+
+    function column(label, seen, freshness, message) {
+      const classes = ["screen", `is-${seen.status.toLowerCase()}`, `is-${freshness}`];
+      const card = el("article", { class: classes.join(" ") });
+      card.append(text("p", "fresh", FRESHNESS[freshness]));
+      card.append(line(`Revision ${seen.revision}`));
+      card.append(line(`${seen.bps} bps`, seen.status));
+      card.append(line(`Version ${seen.version}`));
+      if (message) card.append(text("p", "message", message));
+      const node = el("div", {});
+      node.append(text("p", "screen-label", label), card);
+      return node;
+    }
+
+    function drawScreens(story) {
+      const freshnessOf = (seen) => (seen.version < story.service.version ? "stale" : "fresh");
+      screens.replaceChildren(
+        column("Manager's screen", story.manager, freshnessOf(story.manager)),
+        column("Service", story.service, "current", story.refusal),
+        column("Reviewer's screen", story.reviewer, freshnessOf(story.reviewer), story.message),
+      );
+    }
+
+    // A slider that walks a list of steps.
+    function walk(ids, steps, draw) {
+      const [input, out, summary] = ids.map((id) => document.getElementById(id));
+      function render() {
+        const story = steps[Number(input.value) - 1];
+        out.textContent = `${input.value} · ${story.action}`;
+        summary.textContent = story.summary;
+        draw(story);
+      }
+      input.addEventListener("input", render);
+      render();
+    }
+
+    walk(["step", "step-out", "summary"], STEPS, drawBoard);
+    walk(["screen-step", "screen-step-out", "screen-summary"], SCREEN_STEPS, drawScreens);
+
+    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+
+    function select(tab) {
+      for (const other of tabs) {
+        const selected = other === tab;
+        other.setAttribute("aria-selected", String(selected));
+        other.tabIndex = selected ? 0 : -1;
+        document.getElementById(other.getAttribute("aria-controls")).hidden = !selected;
+      }
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => select(tab));
+      tab.addEventListener("keydown", (event) => {
+        let next = index;
+        if (event.key === "ArrowRight") next = index + 1;
+        if (event.key === "ArrowLeft") next = index - 1;
+        if (next === index) return;
+        event.preventDefault();
+        const target = tabs[(next + tabs.length) % tabs.length];
+        select(target);
+        target.focus();
+      });
+    });
   </script>
 </body>
 </html>

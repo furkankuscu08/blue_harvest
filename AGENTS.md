@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Instructions for any coding agent working in this repository.
+Instructions for any coding agent, and the starting point for an engineer, working in this repository.
 
 A small service for mortgage pricing exception requests: a relationship manager requests a rate discount, a reviewer approves or declines it, and the mortgage process reads the approved discount. Python 3.12, FastAPI, SQLite.
 
@@ -21,7 +21,7 @@ Implement and fix code against these sources of truth.
 |---|---|
 | `app/` | The service: `api` (endpoints), `domain` (business rules), `models` (tables), `schemas` (JSON shapes), `db` (sessions and SQLite settings), `seed`, `errors`, `config`, `main`; `static/` is the browser UI |
 | `tests/` | Domain, API, concurrency and end-to-end tests; `helpers.py` holds the API calls tests share |
-| `docs/` | The sources of truth above and `ai-usage.md`, the log of how AI output was checked |
+| `docs/` | The sources of truth above; `ai-usage.md`, the log of how AI output was checked; `demo-script.md`, the UI check by hand; `story.html`, the worked example as a page. The page and the sequence diagram in the README repeat the example's numbers, so they change with it |
 | `guard/` | The invariant guard experiment: mutants, the LLM-free harness and recorded runs. See `guard/README.md` |
 | `scripts/` | `smoke.sh`, the main story against the service in Docker |
 | `.claude/` | Agent permissions and hooks |
@@ -61,7 +61,7 @@ If you have a suggestion that goes beyond the task, propose it; do not build it.
 ## Database access
 
 - An endpoint that changes data uses only the write session; its checks and its writes run in that one transaction.
-- Build the response before commit and return it only after the commit succeeds. Do not read ORM objects after commit: with `expire_on_commit` they are reloaded and may show someone else's later change.
+- Build the response before commit and return it only after the commit succeeds. Do not read ORM objects after commit: with SQLAlchemy's default `expire_on_commit` they are reloaded and may show someone else's later change.
 
 ## Commands
 
