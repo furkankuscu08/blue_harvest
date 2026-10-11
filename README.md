@@ -181,7 +181,7 @@ To continue the work, start with [AGENTS.md](AGENTS.md): it names the documents 
 
 ## Working with AI agents
 
-I built this with AI agents: Claude Code as the builder and other models as independent reviewers. I made every decision; nothing was merged without my review. [docs/ai-usage.md](docs/ai-usage.md) records who did what and how the output was checked, with the cases where an agent was wrong.
+I built this with AI agents: Claude Code as the builder, with reviewers on other models. I set the scope, weighed the design alternatives and the review findings, and ran the smoke script against Docker and the UI checks by hand; nothing was merged without my review. [docs/ai-usage.md](docs/ai-usage.md) records who did what and how the output was checked, with the cases where an agent was wrong.
 
 - **Tests before code.** Tests are reviewed before anything is implemented, with one question: which wrong implementation would still pass?
 - **Hand mutants.** After implementing, the agent breaks the code on purpose; each break must make a test fail.

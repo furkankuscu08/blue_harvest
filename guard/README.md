@@ -1,6 +1,6 @@
 # Invariant guard
 
-An agent reviews a pull request against the domain rules and writes the regression tests that are missing. To check whether it works, we break one rule on purpose (a mutant), hide the tests that would catch it, and measure whether the agent's tests catch it. Writing the tests needs an LLM. Checking them does not.
+A controlled experiment: given a change and the domain rules, an agent writes the regression tests that are missing. To check whether it works, we break one rule on purpose (a mutant), hide the tests that would catch it, and measure whether the agent's tests catch it. Writing the tests needs an LLM. Checking them does not.
 
 One experiment, and who runs each step. `generate.py` starts the agent, which cannot run commands and writes only under `tests/`.
 
