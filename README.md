@@ -95,14 +95,16 @@ sequenceDiagram
 
 The negotiation can go on after an approval:
 
-| What happens | Latest revision | Status | The mortgage process reads |
+| What happens | Latest revision asks for | Status | The mortgage process reads |
 |---|---|---|---|
 | A reviewer approves 25 bps | 25 bps | Approved | 25 bps |
 | The manager asks for 35 bps | 35 bps | Pending | 25 bps |
 | A reviewer declines | 35 bps | Declined | 25 bps |
 | The manager revises to 30 bps and a reviewer approves | 30 bps | Approved | 30 bps |
 
-A pending or declined revision does not withdraw an earlier approval; only a later approval replaces it. Asking for more must not cost the customer the discount the bank already granted, and a reviewer who declines a new proposal says no to that proposal only. The mortgage process never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is my assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
+A pending or declined revision does not withdraw an earlier approval; only a later approval replaces it. The mortgage process never reads a discount that no reviewer approved.
+
+That the earlier approval stays in force meanwhile is my assumption (A10): asking for more should not cost the customer the discount the bank already granted, and a reviewer who declines a new proposal says no to that proposal only. A reviewer cannot cancel an approval either. Both would be confirmed with the client.
 
 More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram, the invariants I1 to I11 and this example in nine steps.
 
