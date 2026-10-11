@@ -7,6 +7,7 @@ The repository holds an HTTP API, a browser UI on top of it, and an experiment i
 Where to look:
 
 - [Try it in five minutes](#try-it-in-five-minutes): start it, and find your way in the UI.
+- [Key terms](#key-terms): revision, version, approval in force and bps.
 - [The decision](#the-decision): how the two stakeholders' wishes are both met.
 - [Requirements and their evidence](#requirements-and-their-evidence): each requirement with the tests that show it.
 - [How it works](#how-it-works): the path of a call through the code.
@@ -53,7 +54,7 @@ The top bar leads to two screens, and a third opens from either of them:
 
 An action that is not part of the user's role is hidden. One that is part of the role but not possible now is replaced by a sentence that says why, for example "Another reviewer must decide on your request." There is no automatic refresh: "Refresh" reads a screen again.
 
-## Four terms
+## Key terms
 
 This page uses four terms. [docs/state-model.md](docs/state-model.md) defines the first three in full.
 
@@ -92,7 +93,16 @@ sequenceDiagram
     Note over S: The approval is bound to revision 3, 25 bps
 ```
 
-The negotiation can go on after an approval. Approved at 25 bps, the manager asks for 35: the request is pending again and the mortgage process still reads 25. If the reviewer declines, 25 stays. If a later revision at 30 is approved, the mortgage process reads 30. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is my assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
+The negotiation can go on after an approval:
+
+| What happens | Latest revision | Status | The mortgage process reads |
+|---|---|---|---|
+| A reviewer approves 25 bps | 25 bps | Approved | 25 bps |
+| The manager asks for 35 bps | 35 bps | Pending | 25 bps |
+| A reviewer declines | 35 bps | Declined | 25 bps |
+| The manager revises to 30 bps and a reviewer approves | 30 bps | Approved | 30 bps |
+
+A pending or declined revision does not withdraw an earlier approval; only a later approval replaces it. The mortgage process never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is my assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
 
 More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram, the invariants I1 to I11 and this example in nine steps.
 
@@ -155,7 +165,15 @@ uv pip install -r requirements-dev.txt
 pytest
 ```
 
-222 tests. The main levels: the business rules on their own (`test_domain.py`), every endpoint against a real SQLite file, concurrent changes to one request (`test_api_concurrency.py`), and the three main stories from create to the downstream read (`test_end_to_end.py`). The rest cover the tables, the SQLite settings, the seed data and the serving of the UI. CI runs lint, the tests and a dependency audit in one job, and in a second job builds the Docker image and calls it. The UI has no automated browser tests; it was checked by hand with [docs/demo-script.md](docs/demo-script.md).
+222 tests. What is checked, and how:
+
+- **Business rules** on their own: `test_domain.py`.
+- **API:** every endpoint against a real SQLite file.
+- **Concurrency:** concurrent changes to one request, in `test_api_concurrency.py`.
+- **End to end:** the three main stories from create to the downstream read, in `test_end_to_end.py`.
+- **Browser UI:** no automated browser tests; it was checked by hand with [docs/demo-script.md](docs/demo-script.md).
+
+The rest of the tests cover the tables, the SQLite settings, the seed data and the serving of the UI. CI runs lint, the tests and a dependency audit in one job, and in a second job builds the Docker image and calls it.
 
 To continue the work, start with [AGENTS.md](AGENTS.md): it names the documents that define the behaviour and holds the workflow, the rules and all [commands](AGENTS.md#commands). The endpoints, error codes and order of checks are in [docs/api-contract.md](docs/api-contract.md), the UI's rules in [docs/ui-design.md](docs/ui-design.md).
 
@@ -170,7 +188,9 @@ I built this with AI agents: Claude Code as the builder and other models as inde
 
 ### The invariant guard
 
-The bonus demonstration, in [guard/](guard/README.md), which starts with a flowchart of one experiment and who runs each step. The problem: a change can break a business rule while every existing test stays green. An agent reads the change and the rules and writes the missing regression tests. To measure whether that works, I break one rule on purpose, hide the tests that would catch it, and let a script without any LLM run the agent's tests on the correct and on the broken code.
+The bonus demonstration, in [guard/](guard/README.md), which starts with a flowchart of one experiment and who runs each step.
+
+**The problem:** a change can break a business rule while every existing test stays green. An agent reads the change and the rules and writes the missing regression tests. To measure whether that works, I break one rule on purpose, hide the tests that would catch it, and let a script without any LLM run the agent's tests on the correct and on the broken code.
 
 | Run | Rule broken | Result |
 |---|---|---|
@@ -179,9 +199,22 @@ The bonus demonstration, in [guard/](guard/README.md), which starts with a flowc
 
 In the second run the agent reported that all three of its tests would fail on the broken code. One passes. The agent could not run anything; the script showed the difference. An agent's claim is not evidence until something has run.
 
-**Control:** the agent can write only under `tests/`, cannot run commands and never merges. A run in which it changed an existing file is invalid. Its tests run in a container with no network and a time limit. A person confirms that a caught test fails for the right reason. CI stays the merge gate.
+**Control:**
 
-**Risks that remain:** rules the agent misses; false alarms; tests that pass or fail for the wrong reason; instructions hidden in the content of a diff. Two runs are evidence for two scenarios, not a success rate.
+- The agent can write only under `tests/`, cannot run commands and never merges.
+- A run in which it changed an existing file is invalid.
+- Its tests run in a container with no network and a time limit.
+- A person confirms that a caught test fails for the right reason.
+- CI stays the merge gate.
+
+**Risks that remain:**
+
+- Rules the agent misses.
+- False alarms.
+- Tests that pass or fail for the wrong reason.
+- Instructions hidden in the content of a diff.
+
+Two runs are evidence for two scenarios, not a success rate.
 
 ## In a regulated client
 
