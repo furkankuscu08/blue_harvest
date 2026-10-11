@@ -36,7 +36,7 @@ If port 8000 is taken, put `APP_PORT=8001` in front of the `docker compose up` a
 
 ### Finding your way in the UI
 
-Nothing is shown until a user is chosen under "Acting as", and that choice decides what the screens offer. It is kept per browser tab, so two tabs can act as two users.
+Until a user is chosen under "Acting as", the page only asks for that choice, and the choice decides what the screens offer. It is kept per browser tab, so two tabs can act as two users.
 
 | Act as | Role | What they can do |
 |---|---|---|
@@ -48,14 +48,14 @@ Nothing is shown until a user is chosen under "Acting as", and that choice decid
 The top bar leads to two screens, and a third opens from either of them:
 
 - **Requests**, the home screen: every request, latest change first. "Asked for" is the discount of the latest revision; "Approved in force" is the discount the mortgage process reads, which can come from an earlier revision. "Next step" says what a request needs from the acting user. The application id opens the request.
-- **Request detail:** "Latest revision" with its discount and reason, and "Next step" with the form to revise or to approve or decline. "History" below lists every revision with its decision and marks the one in force.
+- **Request detail:** "Latest revision" with its discount and reason, and "Next step" with the "Revise" button for the manager who created the request, or the form to approve or decline for a reviewer. "History" below lists every revision with its decision and marks the one in force.
 - **Applications:** every application with "View request", or "New request" for a relationship manager when it has none. For the mortgage process each row shows the approved discount, and choosing that user opens this screen.
 
 An action that is not part of the user's role is hidden. One that is part of the role but not possible now is replaced by a sentence that says why, for example "Another reviewer must decide on your request." There is no automatic refresh: "Refresh" reads a screen again.
 
 ## Four terms
 
-The rest of this page uses four terms. [docs/state-model.md](docs/state-model.md) defines them in full.
+This page uses four terms. [docs/state-model.md](docs/state-model.md) defines the first three in full.
 
 - **Revision:** one proposal, a discount and a reason. A revision never changes; a change to a request is a new revision with the next number.
 - **Version:** a counter on the request that increases with every revise and every decision. A client sends the version it saw, and the server refuses the call if the request changed since.
@@ -125,7 +125,7 @@ flowchart LR
 The path of a call that changes data, for example an approval:
 
 1. The browser UI calls the public API, like any other client. It has no access of its own, so every rule is enforced by the API.
-2. `app/api.py` identifies the caller from the `X-User-Id` header and opens one write transaction. That transaction takes SQLite's write lock before it reads anything, so two changes to one request cannot both be checked against the same state.
+2. `app/api.py` identifies the caller from the `X-User-Id` header and works in one write transaction. `app/db.py` begins that transaction so that it takes SQLite's write lock before it reads anything, so two changes to one request cannot both be checked against the same state.
 3. `app/domain.py` holds the business rules: the role, who created the request, four-eyes, the version and the status. It knows nothing about HTTP. A call that fails a check changes nothing.
 4. The checks and the write happen in that one transaction. The response is built before the commit and returned only after the commit succeeds.
 
