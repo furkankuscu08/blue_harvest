@@ -23,6 +23,17 @@ docker compose up --build -d --wait
 
 Open http://localhost:8000/ and choose who to act as in the top bar. The seed data has five users and five applications: one without a request, and requests that are pending, declined and approved.
 
+- **The main story in the browser:** the seven steps at the top of [docs/demo-script.md](docs/demo-script.md): create, decline, revise, a second revise while the reviewer still has the first one open, an approval that is refused until the reviewer reloads, and the read by the mortgage process. Steps 8 to 12 go on negotiating after the approval.
+- **The API:** http://localhost:8000/docs. Every call except `GET /users` and `GET /health` needs an `X-User-Id` header, for example `alice`, `carol` or `mortgage-process`.
+- **The same story as a script:** `scripts/smoke.sh` runs 24 checks against the service in Docker, including a retried create and the first five steps of the example. It needs `curl` and `jq`, and it deletes the local volume.
+
+```bash
+docker compose exec app python -m app.seed --reset   # back to the seed data
+docker compose down -v                               # stop and delete the data
+```
+
+If port 8000 is taken, put `APP_PORT=8001` in front of the `docker compose up` and `scripts/smoke.sh` commands and use that port in the addresses.
+
 ### Finding your way in the UI
 
 Nothing is shown until a user is chosen under "Acting as", and that choice decides what the screens offer. It is kept per browser tab, so two tabs can act as two users.
@@ -41,17 +52,6 @@ The top bar leads to two screens, and a third opens from either of them:
 - **Applications:** every application with "View request", or "New request" for a relationship manager when it has none. For the mortgage process each row shows the approved discount, and choosing that user opens this screen.
 
 An action that is not part of the user's role is hidden. One that is part of the role but not possible now is replaced by a sentence that says why, for example "Another reviewer must decide on your request." There is no automatic refresh: "Refresh" reads a screen again.
-
-- **The main story in the browser:** the seven steps at the top of [docs/demo-script.md](docs/demo-script.md): create, decline, revise, a second revise while the reviewer still has the first one open, an approval that is refused until the reviewer reloads, and the read by the mortgage process. Steps 8 to 12 go on negotiating after the approval.
-- **The API:** http://localhost:8000/docs. Every call except `GET /users` and `GET /health` needs an `X-User-Id` header, for example `alice`, `carol` or `mortgage-process`.
-- **The same story as a script:** `scripts/smoke.sh` runs 24 checks against the service in Docker, including a retried create and the first five steps of the example. It needs `curl` and `jq`, and it deletes the local volume.
-
-```bash
-docker compose exec app python -m app.seed --reset   # back to the seed data
-docker compose down -v                               # stop and delete the data
-```
-
-If port 8000 is taken, put `APP_PORT=8001` in front of the `docker compose up` and `scripts/smoke.sh` commands and use that port in the addresses.
 
 ## Four terms
 
@@ -94,7 +94,9 @@ sequenceDiagram
 
 The negotiation can go on after an approval. Approved at 25 bps, the manager asks for 35: the request is pending again and the mortgage process still reads 25. If the reviewer declines, 25 stays. If a later revision at 30 is approved, the mortgage process reads 30. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is my assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
 
-More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram, the invariants I1 to I11 and this example in nine steps. [docs/story.html](docs/story.html) walks the nine steps one at a time and, on its second tab, shows what the manager and the reviewer each see while a decision is refused as stale; GitHub shows its source, so open the file from a clone in a browser.
+More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram, the invariants I1 to I11 and this example in nine steps.
+
+**The example as a page:** [docs/story.html](docs/story.html) walks the nine steps one at a time and, on its second tab, shows what the manager and the reviewer each see while a decision is refused as stale. GitHub shows only its source: clone the repository and open the file in a browser.
 
 ## Requirements and their evidence
 
@@ -128,17 +130,6 @@ The path of a call that changes data, for example an approval:
 4. The checks and the write happen in that one transaction. The response is built before the commit and returned only after the commit succeeds.
 
 A call that only reads uses a separate read session and sees one snapshot of the data.
-
-| File in `app/` | What is there |
-|---|---|
-| `api.py` | The endpoints, and the checks that need the database: the application exists, one request per application, the idempotency key |
-| `domain.py` | The business rules for create, revise and decide, and which approval is in force |
-| `models.py`, `schemas.py` | The tables, and the shapes of the JSON |
-| `db.py` | The read and write sessions and the SQLite settings |
-| `errors.py` | The error body: `code`, `message`, `details` |
-| `seed.py` | The seed data, created through the same business rules |
-| `main.py`, `config.py` | Building the application and serving the UI; the settings |
-| `static/` | The browser UI: HTML, CSS and plain JavaScript, no build step |
 
 Why the lock matters, and what replaces it on PostgreSQL, is under [Before production](#before-production).
 
@@ -213,13 +204,11 @@ What a client needs on top, and this exercise does not have: an approved list of
 
 ## Known limits
 
-- The `X-User-Id` header selects a seeded user. Anyone can act as anyone.
 - SQLite allows one writer at a time. That is enough here and not for a busy service.
 - A response that is lost after the request was stored cannot be produced reliably by hand in a browser. The replay is proven by the API tests and the smoke script, not by the UI check.
 - The UI keeps the idempotency key in the page only. After a page reload, sending the same create again gets `REQUEST_ALREADY_EXISTS` if the earlier one was stored, and the UI links to the existing request.
 - Applications and users are seed data. Only `APP-1001` starts without a request, so a second create needs a seed reset.
 - Idempotency records do not expire. Only a seed reset removes them.
-- A reviewer cannot cancel an approval. Declining a new revision leaves the earlier approval in force, and an approval has no end date.
 - GitHub does not enforce the merge gate: branch protection is not available for a private repository on a free account. The gate is a working rule, that nothing is merged before CI passes on the head commit.
 - The guard experiment covers two deliberately created gaps.
 
@@ -233,17 +222,9 @@ What a client needs on top, and this exercise does not have: an approved list of
 | Day | Hours | What |
 |---|---|---|
 | Before day 1 | 5 | Planning, three review rounds |
-| 1 | 4 | Assumptions and scope, state model, API contract |
-| 2 | 2 | Skeleton, Docker, CI, proof of the locking approach |
-| 3 | 2 | Business rules, first guard run |
-| 4 | 3 | Create with idempotency, decide, approved discount |
-| 5 | 3 | Revise, concurrency tests, lists |
-| 6 | 4 | UI |
-| 7 | 2 | Second guard run |
-| 8 | 1 | Checklist: smoke script, UI by hand |
-| 9 | 2 | This README, contract clean-up |
-| After day 9 | 3 | Revising an approved request |
-| After day 9 | 1 | The example in nine steps, and a page that walks it |
-| After day 9 | 2 | Three pictures: the guard's steps, the refused stale approval, a second tab on the page |
+| 1 to 2 | 6 | Assumptions and scope, state model, API contract; skeleton, Docker, CI, proof of the locking approach |
+| 3 to 5 | 8 | Business rules and the API: create with idempotency, decide, revise, lists, concurrency tests; first guard run |
+| 6 to 9 | 9 | UI, second guard run, smoke script and UI check by hand, this README |
+| After day 9 | 6 | Revising an approved request; the example in nine steps, its page and three pictures |
 
 34 hours in total. The plan and the log are in [docs/plan.md](docs/plan.md).
