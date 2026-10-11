@@ -35,7 +35,7 @@ Implement and fix code against these sources of truth.
 4. Run lint and tests before saying the work is done. For a change to the API, the human also runs `scripts/smoke.sh` before merging.
 5. Open a small pull request using the template. It describes the change only: what changes and why. The human confirms it before merging. Nothing is merged before CI has passed on the head commit.
 
-For a change to the README or to another document that is not a source of truth, steps 1 to 3 do not apply: check every statement about the code against the code, and every statement about behaviour against the sources of truth. Step 4 still applies. A change to a source of truth changes agreed behaviour: stop and ask first.
+For a change to documents that leaves the agreed behaviour as it is, steps 1 to 3 do not apply: check every statement about the code against the code, and every statement about behaviour against the sources of truth. Step 4 still applies. A change to what the documents agree on is a change of behaviour: stop and ask first; once approved, it follows the workflow from step 1.
 
 ## Rules
 
