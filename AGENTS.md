@@ -21,7 +21,7 @@ Implement and fix code against these sources of truth.
 |---|---|
 | `app/` | The service: `api` (endpoints), `domain` (business rules), `models` (tables), `schemas` (JSON shapes), `db` (sessions and SQLite settings), `seed`, `errors`, `config`, `main`; `static/` is the browser UI |
 | `tests/` | Domain, API, concurrency and end-to-end tests; `helpers.py` holds the API calls tests share |
-| `docs/` | The sources of truth above; `ai-usage.md`, the log of how AI output was checked; `demo-script.md`, the UI check by hand; `story.html`, the worked example as a page. The page and the sequence diagram in the README repeat the example's numbers, so they change with it |
+| `docs/` | The sources of truth above; `ai-usage.md`, the log of how AI output was checked; `demo-script.md`, the UI check by hand; `story.html`, the worked example as a page. The page, and the sequence diagram and the negotiation table in the README, repeat the example's numbers, so they change with it |
 | `guard/` | The invariant guard experiment: mutants, the LLM-free harness and recorded runs. See `guard/README.md` |
 | `scripts/` | `smoke.sh`, the main story against the service in Docker |
 | `.claude/` | Agent permissions and hooks |
@@ -33,7 +33,9 @@ Implement and fix code against these sources of truth.
 2. Write the tests first and show them before implementing domain behaviour.
 3. Implement the smallest change that makes them pass.
 4. Run lint and tests before saying the work is done. For a change to the API, the human also runs `scripts/smoke.sh` before merging.
-5. Open a small pull request using the template. It describes the change only: what changes and why. The human confirms it before merging.
+5. Open a small pull request using the template. It describes the change only: what changes and why. The human confirms it before merging. Nothing is merged before CI has passed on the head commit.
+
+For a change to documents only, steps 1 to 3 do not apply. Check every statement about the code against the code, and every statement about behaviour against the sources of truth.
 
 ## Rules
 

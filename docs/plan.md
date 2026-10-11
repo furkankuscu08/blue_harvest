@@ -23,7 +23,7 @@ SQLite rules: `PRAGMA foreign_keys=ON` and `busy_timeout` on every connection, W
 
 ## Schedule
 
-All nine days are done; the API, the UI, the agent experiment and the README are complete. One change of behaviour, a new worked example and three pictures followed; see [Changes and why](#changes-and-why).
+All nine days are done; the API, the UI, the agent experiment and the README are complete. One change of behaviour, a new worked example, three pictures and a README for a first-time reader followed; see [Changes and why](#changes-and-why).
 
 
 | Day         | Hours | Outcome                                                                                      | Done when |
@@ -40,9 +40,10 @@ All nine days are done; the API, the UI, the agent experiment and the README are
 | After day 9 | 3     | An approved request can be revised                                                           | Done      |
 | After day 9 | 1     | The worked example in nine steps, with a page that walks it                                  | Done      |
 | After day 9 | 2     | Three pictures: the guard's steps, the refused stale approval, a second tab on the page      | Done      |
+| After day 9 | 1     | The README for a first-time reader; three changes to `AGENTS.md`                             | Done      |
 
 
-Spent, including 5 hours of planning: 34 hours.
+Spent, including 5 hours of planning: 35 hours.
 
 ### Day 6: UI
 
@@ -178,6 +179,15 @@ Day 9 added no behaviour. What changed later is described under [Changes and why
 - The README says that GitHub does not enforce the merge gate, because branch protection is not available for a private repository on a free account, and lists the protection of `main` under "Before production".
 - No behaviour changed, and no check was added.
 
+**After day 9 (2026-10-11), the README for a first-time reader.**
+
+- The README has a contents list, a guide to the UI (who to act as, the three screens, why an action is hidden or replaced by a sentence), four key terms, and "How it works": a diagram and the path of a call that changes data through `app/api.py`, `app/domain.py` and `app/db.py`.
+- The negotiation after an approval is a table that shows what the mortgage process reads at each step, with the business reason for A10 below it. The test levels and the guard's controls and risks are lists, and `story.html` has its own line.
+- The time table in the README is grouped into five rows; the daily log stays here.
+- A review of the first pull request found statements that did not match the code (where the write lock is taken, what the page shows before a user is chosen) and two limits that had been removed although nothing else states them as clearly. The statements were corrected and the limits put back.
+- `AGENTS.md` names the negotiation table next to the sequence diagram as a place that repeats the example's numbers, says that nothing is merged before CI has passed on the head commit, and says what to check for a change to documents only.
+- No behaviour changed, and no check was added.
+
 
 
 ## Time log
@@ -198,5 +208,6 @@ Day 9 added no behaviour. What changed later is described under [Changes and why
 | 2026-10-07 to 08 | 3     | After day 9: an approved request can be revised and its approval stays in force (rules, tests, API, UI and documents in one pull request), reviews of the tests and the backend, the demo script run again by hand        |
 | 2026-10-09       | 1     | After day 9: the worked example in nine steps with a revise while pending, a page that walks it, and the domain test, the demo script and the smoke script aligned to it                                                  |
 | 2026-10-10       | 2     | After day 9: three pictures, a flowchart of the guard experiment, a sequence diagram of the refused stale approval in the README, and a second tab on the story page                                                      |
+| 2026-10-11       | 1     | After day 9: the README for a first-time reader (contents list, a guide to the UI, key terms, how the code works, a table for the negotiation after an approval), reviews of it, and three changes to `AGENTS.md`         |
 
 
