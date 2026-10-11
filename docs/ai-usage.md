@@ -71,6 +71,8 @@ Pull requests describe the change only. This log records what the agents did, wh
 - The builder's mutant script restored files with `git checkout`, which also erased the uncommitted implementation, so nine of ten mutants ran against the old code. Their output made no sense, which exposed it. They were rerun from a backup. After the rerun, nine of ten mutants failed a test. The tenth loads the caller in a separate read session: it breaks the `AGENTS.md` rule but has no observable effect, because no endpoint changes users. The mutant runs were one-off scripts outside the repository. [#16]
 - The builder gave "it would change the answer for unknown routes" as the reason for not mounting the UI's files at the root, and wrote a test for it. Its own hand mutant, a mount at the root, passed that test: a `GET` still got the framework's 404, and only other methods changed, to a 405. The test now covers `POST` as well and fails for the mutant. [#19]
 - Three of the builder's fifteen hand mutants for the approval in force first failed for the wrong reason: the mutated code used a name that the module does not import, so the tests stopped on a `NameError` and not on an assertion. Eleven and twenty-five failing tests for a one-line change looked wrong. The mutants were repaired and run again; then two or three tests failed, on the value. [#27]
+- Asked to make the README easier for a new reader, the builder wrote three statements that the code contradicts: that `app/api.py` takes the write lock (`app/db.py` does), that nothing is shown before a user is chosen (the page asks for the choice), and that a manager sees a form to revise (first a "Revise" button). A separate review agent found them by reading the code. To shorten the page the builder also proposed to drop "With more time", which the assignment says it will ask about, and two points of "Known limits" that nothing else states as clearly. It found the first itself when it searched the assignment before deleting; the review found the second. All were corrected before merging. [#33]
+- The rule the builder wrote for changes to documents only also covered the sources of truth, so a rule could have been changed on paper without a test. The review of that pull request found it, and the rule now excludes them. [#35]
 
 ### A claim counts only with a check that fails without it
 
@@ -118,3 +120,5 @@ Pull requests describe the change only. This log records what the agents did, wh
 [#25]: https://github.com/furkankuscu08/blue_harvest/pull/25
 [#26]: https://github.com/furkankuscu08/blue_harvest/pull/26
 [#27]: https://github.com/furkankuscu08/blue_harvest/pull/27
+[#33]: https://github.com/furkankuscu08/blue_harvest/pull/33
+[#35]: https://github.com/furkankuscu08/blue_harvest/pull/35
