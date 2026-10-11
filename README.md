@@ -4,6 +4,15 @@ A small internal service for a mortgage lender. A relationship manager requests 
 
 The repository holds an HTTP API, a browser UI on top of it, and an experiment in which an AI agent writes regression tests that a script then checks. It is written in Python 3.12 with FastAPI and SQLite: the language I know best, with nothing to install besides Docker.
 
+Where to look:
+
+- [Try it in five minutes](#try-it-in-five-minutes): start it, and find your way in the UI.
+- [The decision](#the-decision): how the two stakeholders' wishes are both met.
+- [Requirements and their evidence](#requirements-and-their-evidence): each requirement with the tests that show it.
+- [How it works](#how-it-works): the path of a call through the code.
+- [Working with AI agents](#working-with-ai-agents): how the agents were used and checked.
+- [Known limits](#known-limits): what this does not do.
+
 ## Try it in five minutes
 
 Requires Docker. Built and checked on Ubuntu under WSL2 and on Ubuntu in CI; not tried on macOS or native Windows. The Docker commands are the same there; `scripts/smoke.sh` and the `APP_PORT=8001` prefix need a bash shell.
@@ -24,6 +33,34 @@ docker compose down -v                               # stop and delete the data
 ```
 
 If port 8000 is taken, put `APP_PORT=8001` in front of the `docker compose up` and `scripts/smoke.sh` commands and use that port in the addresses.
+
+### Finding your way in the UI
+
+Until a user is chosen under "Acting as", the page only asks for that choice, and the choice decides what the screens offer. It is kept per browser tab, so two tabs can act as two users.
+
+| Act as | Role | What they can do |
+|---|---|---|
+| Alice, Bob | Relationship manager | Create a request; revise a request they created |
+| Carol | Reviewer | Approve or decline a pending request |
+| Dave | Relationship manager and reviewer | Both, but not decide on a request he created |
+| Mortgage process | The downstream system | Read the approved discount of each application |
+
+The top bar leads to two screens, and a third opens from either of them:
+
+- **Requests**, the home screen: every request, latest change first. "Asked for" is the discount of the latest revision; "Approved in force" is the discount the mortgage process reads, which can come from an earlier revision. "Next step" says what a request needs from the acting user. The application id opens the request.
+- **Request detail:** "Latest revision" with its discount and reason, and "Next step" with the "Revise" button for the manager who created the request, or the form to approve or decline for a reviewer. "History" below lists every revision with its decision and marks the one in force.
+- **Applications:** every application with "View request", or "New request" for a relationship manager when it has none. For the mortgage process each row shows the approved discount, if any, and choosing that user opens this screen.
+
+An action that is not part of the user's role is hidden. One that is part of the role but not possible now is replaced by a sentence that says why, for example "Another reviewer must decide on your request." There is no automatic refresh: "Refresh" reads a screen again.
+
+## Four terms
+
+This page uses four terms. [docs/state-model.md](docs/state-model.md) defines the first three in full.
+
+- **Revision:** one proposal, a discount and a reason. A revision's discount and reason never change; changing either creates a new revision with the next number.
+- **Version:** a counter on the request that increases with every revise and every decision. A client sends the version it saw, and the server refuses the call if the request changed since.
+- **Approval in force:** the approved revision with the highest number. It is what the mortgage process reads. It is not the highest discount and not always the latest revision.
+- **bps:** basis points. 25 bps is 0.25 percentage points.
 
 ## The decision
 
@@ -57,7 +94,9 @@ sequenceDiagram
 
 The negotiation can go on after an approval. Approved at 25 bps, the manager asks for 35: the request is pending again and the mortgage process still reads 25. If the reviewer declines, 25 stays. If a later revision at 30 is approved, the mortgage process reads 30. It never reads a discount that no reviewer approved. That the earlier approval stays in force meanwhile is my assumption (A10), and a reviewer cannot cancel an approval; both would be confirmed with the client.
 
-More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram, the invariants I1 to I11 and this example in nine steps. [docs/story.html](docs/story.html) walks the nine steps one at a time and, on its second tab, shows what the manager and the reviewer each see while a decision is refused as stale; GitHub shows its source, so open the file from a clone in a browser.
+More in [docs/assumptions-and-scope.md](docs/assumptions-and-scope.md), section B, and in [docs/state-model.md](docs/state-model.md), which has the state diagram, the invariants I1 to I11 and this example in nine steps.
+
+**The example as a page:** [docs/story.html](docs/story.html) walks the nine steps one at a time and, on its second tab, shows what the manager and the reviewer each see while a decision is refused as stale. GitHub shows only its source: clone the repository and open the file in a browser.
 
 ## Requirements and their evidence
 
@@ -72,6 +111,27 @@ R1 to R6 are the requirements of the assignment, as numbered in [docs/assumption
 | R5 No duplicate on a retry | `Idempotency-Key` on create; the first response is stored in the same transaction as the request and returned again; the same key with other fields is refused | `test_same_key_and_fields_replays_the_original_response`, `test_same_key_with_different_fields_is_rejected`, `test_request_is_not_stored_without_its_idempotency_record`, the replay steps of `scripts/smoke.sh`, the second [guard run](guard/runs/2026-10-05-idempotent-replay/result.md) | I10 |
 | R6 Easy to run locally | One command, no setup | The `docker` job in CI builds the image and calls it; `scripts/smoke.sh` | |
 | The stakeholder decision | A revision never changes; a decision needs the current version; an approved request is changed only by a new revision with its own approval | `test_earlier_revisions_never_change`, `test_stale_version_cannot_approve`, `test_negotiation_continues_after_an_approval`, steps 4 to 6 and 8 to 12 of the [demo script](docs/demo-script.md) | I2, I3, I7, I11 |
+
+## How it works
+
+```mermaid
+flowchart LR
+    UI["Browser UI<br>app/static"] --> API
+    Other["Any other client"] --> API
+    API["app/api.py<br>caller, transaction,<br>checks that need the database"] --> Domain["app/domain.py<br>business rules"]
+    API --> DB[("SQLite")]
+```
+
+The path of a call that changes data, for example an approval:
+
+1. The browser UI calls the public API, like any other client. It has no access of its own, so every rule is enforced by the API.
+2. `app/api.py` identifies the caller from the `X-User-Id` header and works in one write transaction. `app/db.py` begins that transaction so that it takes SQLite's write lock before it reads anything, so two changes to one request cannot both be checked against the same state.
+3. `app/domain.py` holds the business rules: the role, who created the request, four-eyes, the version and the status. It knows nothing about HTTP. A call that fails a check changes nothing.
+4. The checks and the write happen in that one transaction. The response is built before the commit and returned only after the commit succeeds.
+
+A call that only reads uses a separate read session and sees one snapshot of the data.
+
+Why the lock matters, and what replaces it on PostgreSQL, is under [Before production](#before-production).
 
 ## Assumptions and scope
 
@@ -164,17 +224,9 @@ What a client needs on top, and this exercise does not have: an approved list of
 | Day | Hours | What |
 |---|---|---|
 | Before day 1 | 5 | Planning, three review rounds |
-| 1 | 4 | Assumptions and scope, state model, API contract |
-| 2 | 2 | Skeleton, Docker, CI, proof of the locking approach |
-| 3 | 2 | Business rules, first guard run |
-| 4 | 3 | Create with idempotency, decide, approved discount |
-| 5 | 3 | Revise, concurrency tests, lists |
-| 6 | 4 | UI |
-| 7 | 2 | Second guard run |
-| 8 | 1 | Checklist: smoke script, UI by hand |
-| 9 | 2 | This README, contract clean-up |
-| After day 9 | 3 | Revising an approved request |
-| After day 9 | 1 | The example in nine steps, and a page that walks it |
-| After day 9 | 2 | Three pictures: the guard's steps, the refused stale approval, a second tab on the page |
+| 1 to 2 | 6 | Assumptions and scope, state model, API contract; skeleton, Docker, CI, proof of the locking approach |
+| 3 to 5 | 8 | Business rules and the API: create with idempotency, decide, revise, lists, concurrency tests; first guard run |
+| 6 to 9 | 9 | UI, second guard run, smoke script and UI check by hand, this README |
+| After day 9 | 6 | Revising an approved request; the example in nine steps, its page and three pictures |
 
 34 hours in total. The plan and the log are in [docs/plan.md](docs/plan.md).
