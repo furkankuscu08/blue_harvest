@@ -14,6 +14,25 @@ docker compose up --build -d --wait
 
 Open http://localhost:8000/ and choose who to act as in the top bar. The seed data has five users and five applications: one without a request, and requests that are pending, declined and approved.
 
+### Finding your way in the UI
+
+Nothing is shown until a user is chosen under "Acting as", and that choice decides what the screens offer. It is kept per browser tab, so two tabs can act as two users.
+
+| Act as | Role | What they can do |
+|---|---|---|
+| Alice, Bob | Relationship manager | Create a request; revise a request they created |
+| Carol | Reviewer | Approve or decline a pending request |
+| Dave | Relationship manager and reviewer | Both, but not decide on a request he created |
+| Mortgage process | The downstream system | Read the approved discount of each application |
+
+The top bar leads to two screens, and a third opens from either of them:
+
+- **Requests**, the home screen: every request, latest change first. "Asked for" is the discount of the latest revision; "Approved in force" is the discount the mortgage process reads, which can come from an earlier revision. "Next step" says what a request needs from the acting user. The application id opens the request.
+- **Request detail:** "Latest revision" with its discount and reason, and "Next step" with the form to revise or to approve or decline. "History" below lists every revision with its decision and marks the one in force.
+- **Applications:** every application with "View request", or "New request" for a relationship manager when it has none. For the mortgage process each row shows the approved discount, and choosing that user opens this screen.
+
+An action that is not part of the user's role is hidden. One that is part of the role but not possible now is replaced by a sentence that says why, for example "Another reviewer must decide on your request." There is no automatic refresh: "Refresh" reads a screen again.
+
 - **The main story in the browser:** the seven steps at the top of [docs/demo-script.md](docs/demo-script.md): create, decline, revise, a second revise while the reviewer still has the first one open, an approval that is refused until the reviewer reloads, and the read by the mortgage process. Steps 8 to 12 go on negotiating after the approval.
 - **The API:** http://localhost:8000/docs. Every call except `GET /users` and `GET /health` needs an `X-User-Id` header, for example `alice`, `carol` or `mortgage-process`.
 - **The same story as a script:** `scripts/smoke.sh` runs 24 checks against the service in Docker, including a retried create and the first five steps of the example. It needs `curl` and `jq`, and it deletes the local volume.
