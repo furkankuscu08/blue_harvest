@@ -181,7 +181,7 @@ To continue the work, start with [AGENTS.md](AGENTS.md): it names the documents 
 
 ## Working with AI agents
 
-I built this with AI agents: Claude Code as the builder and other models as independent reviewers. I made every decision; nothing was merged without my review. [docs/ai-usage.md](docs/ai-usage.md) records who did what and how the output was checked, with the cases where an agent was wrong.
+I built this with AI agents: Claude Code as the builder, with reviewers on other models. I set the scope, weighed the design alternatives and the review findings, and ran the smoke script against Docker and the UI checks by hand; nothing was merged without my review. [docs/ai-usage.md](docs/ai-usage.md) records who did what and how the output was checked, with the cases where an agent was wrong.
 
 - **Tests before code.** Tests are reviewed before anything is implemented, with one question: which wrong implementation would still pass?
 - **Hand mutants.** After implementing, the agent breaks the code on purpose; each break must make a test fail.
@@ -262,6 +262,6 @@ What a client needs on top, and this exercise does not have: an approved list of
 | 1 to 2 | 6 | Assumptions and scope, state model, API contract; skeleton, Docker, CI, proof of the locking approach |
 | 3 to 5 | 8 | Business rules and the API: create with idempotency, decide, revise, lists, concurrency tests; first guard run |
 | 6 to 9 | 9 | UI, second guard run, smoke script and UI check by hand, this README |
-| After day 9 | 6 | Revising an approved request; the example in nine steps, its page and three pictures |
+| After day 9 | 7 | Revising an approved request; the example in nine steps, its page and three pictures; the README for a first-time reader |
 
-34 hours in total. The plan and the log are in [docs/plan.md](docs/plan.md).
+35 hours in total. The plan and the log are in [docs/plan.md](docs/plan.md).
