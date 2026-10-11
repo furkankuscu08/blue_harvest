@@ -4,6 +4,15 @@ A small internal service for a mortgage lender. A relationship manager requests 
 
 The repository holds an HTTP API, a browser UI on top of it, and an experiment in which an AI agent writes regression tests that a script then checks. It is written in Python 3.12 with FastAPI and SQLite: the language I know best, with nothing to install besides Docker.
 
+Where to look:
+
+- [Try it in five minutes](#try-it-in-five-minutes): start it, and find your way in the UI.
+- [The decision](#the-decision): how the two stakeholders' wishes are both met.
+- [Requirements and their evidence](#requirements-and-their-evidence): each requirement with the tests that show it.
+- [How it works](#how-it-works): the path of a call through the code.
+- [Working with AI agents](#working-with-ai-agents): how the agents were used and checked.
+- [Known limits](#known-limits): what this does not do.
+
 ## Try it in five minutes
 
 Requires Docker. Built and checked on Ubuntu under WSL2 and on Ubuntu in CI; not tried on macOS or native Windows. The Docker commands are the same there; `scripts/smoke.sh` and the `APP_PORT=8001` prefix need a bash shell.
@@ -43,6 +52,15 @@ docker compose down -v                               # stop and delete the data
 ```
 
 If port 8000 is taken, put `APP_PORT=8001` in front of the `docker compose up` and `scripts/smoke.sh` commands and use that port in the addresses.
+
+## Four terms
+
+The rest of this page uses four terms. [docs/state-model.md](docs/state-model.md) defines them in full.
+
+- **Revision:** one proposal, a discount and a reason. A revision never changes; a change to a request is a new revision with the next number.
+- **Version:** a counter on the request that increases with every revise and every decision. A client sends the version it saw, and the server refuses the call if the request changed since.
+- **Approval in force:** the approved revision with the highest number. It is what the mortgage process reads. It is not the highest discount and not always the latest revision.
+- **bps:** basis points. 25 bps is 0.25 percentage points.
 
 ## The decision
 
@@ -91,6 +109,38 @@ R1 to R6 are the requirements of the assignment, as numbered in [docs/assumption
 | R5 No duplicate on a retry | `Idempotency-Key` on create; the first response is stored in the same transaction as the request and returned again; the same key with other fields is refused | `test_same_key_and_fields_replays_the_original_response`, `test_same_key_with_different_fields_is_rejected`, `test_request_is_not_stored_without_its_idempotency_record`, the replay steps of `scripts/smoke.sh`, the second [guard run](guard/runs/2026-10-05-idempotent-replay/result.md) | I10 |
 | R6 Easy to run locally | One command, no setup | The `docker` job in CI builds the image and calls it; `scripts/smoke.sh` | |
 | The stakeholder decision | A revision never changes; a decision needs the current version; an approved request is changed only by a new revision with its own approval | `test_earlier_revisions_never_change`, `test_stale_version_cannot_approve`, `test_negotiation_continues_after_an_approval`, steps 4 to 6 and 8 to 12 of the [demo script](docs/demo-script.md) | I2, I3, I7, I11 |
+
+## How it works
+
+```mermaid
+flowchart LR
+    UI["Browser UI<br>app/static"] --> API
+    Other["Any other client"] --> API
+    API["app/api.py<br>caller, transaction,<br>checks that need the database"] --> Domain["app/domain.py<br>business rules"]
+    API --> DB[("SQLite")]
+```
+
+The path of a call that changes data, for example an approval:
+
+1. The browser UI calls the public API, like any other client. It has no access of its own, so every rule is enforced by the API.
+2. `app/api.py` identifies the caller from the `X-User-Id` header and opens one write transaction. That transaction takes SQLite's write lock before it reads anything, so two changes to one request cannot both be checked against the same state.
+3. `app/domain.py` holds the business rules: the role, who created the request, four-eyes, the version and the status. It knows nothing about HTTP. A call that fails a check changes nothing.
+4. The checks and the write happen in that one transaction. The response is built before the commit and returned only after the commit succeeds.
+
+A call that only reads uses a separate read session and sees one snapshot of the data.
+
+| File in `app/` | What is there |
+|---|---|
+| `api.py` | The endpoints, and the checks that need the database: the application exists, one request per application, the idempotency key |
+| `domain.py` | The business rules for create, revise and decide, and which approval is in force |
+| `models.py`, `schemas.py` | The tables, and the shapes of the JSON |
+| `db.py` | The read and write sessions and the SQLite settings |
+| `errors.py` | The error body: `code`, `message`, `details` |
+| `seed.py` | The seed data, created through the same business rules |
+| `main.py`, `config.py` | Building the application and serving the UI; the settings |
+| `static/` | The browser UI: HTML, CSS and plain JavaScript, no build step |
+
+Why the lock matters, and what replaces it on PostgreSQL, is under [Before production](#before-production).
 
 ## Assumptions and scope
 
