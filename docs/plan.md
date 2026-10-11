@@ -1,6 +1,6 @@
 # Working plan
 
-The current plan, last updated on 2026-10-10, after the changes that followed day 9. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
+The current plan, last updated on 2026-10-11, after the changes that followed day 9. Earlier versions are in the git history of this file; the reasons for the larger changes are listed under [Changes and why](#changes-and-why).
 
 The plan covers how the work is organised. What the service does is defined in [state-model.md](state-model.md), [api-contract.md](api-contract.md) and [assumptions-and-scope.md](assumptions-and-scope.md); those documents win over this one.
 
@@ -185,7 +185,7 @@ Day 9 added no behaviour. What changed later is described under [Changes and why
 - The negotiation after an approval is a table that shows what the mortgage process reads at each step, with the business reason for A10 below it. The test levels and the guard's controls and risks are lists, and `story.html` has its own line.
 - The time table in the README is grouped into five rows; the daily log stays here.
 - A review of the first pull request found statements that did not match the code (where the write lock is taken, what the page shows before a user is chosen) and two limits that had been removed although nothing else states them as clearly. The statements were corrected and the limits put back.
-- `AGENTS.md` names the negotiation table next to the sequence diagram as a place that repeats the example's numbers, says that nothing is merged before CI has passed on the head commit, and says what to check for a change to documents only.
+- `AGENTS.md` names the three places in the README that repeat the example's numbers, says that nothing is merged before CI has passed on the head commit, and says what to check for a change to documents only.
 - No behaviour changed, and no check was added.
 
 

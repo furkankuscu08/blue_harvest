@@ -21,7 +21,7 @@ Implement and fix code against these sources of truth.
 |---|---|
 | `app/` | The service: `api` (endpoints), `domain` (business rules), `models` (tables), `schemas` (JSON shapes), `db` (sessions and SQLite settings), `seed`, `errors`, `config`, `main`; `static/` is the browser UI |
 | `tests/` | Domain, API, concurrency and end-to-end tests; `helpers.py` holds the API calls tests share |
-| `docs/` | The sources of truth above; `ai-usage.md`, the log of how AI output was checked; `demo-script.md`, the UI check by hand; `story.html`, the worked example as a page. The page, and the sequence diagram and the negotiation table in the README, repeat the example's numbers, so they change with it |
+| `docs/` | The sources of truth above; `ai-usage.md`, the log of how AI output was checked; `demo-script.md`, the UI check by hand; `story.html`, the worked example as a page. The page and the README repeat the example's numbers, so they change with it: in the README, the text of "The decision", its sequence diagram and its negotiation table |
 | `guard/` | The invariant guard experiment: mutants, the LLM-free harness and recorded runs. See `guard/README.md` |
 | `scripts/` | `smoke.sh`, the main story against the service in Docker |
 | `.claude/` | Agent permissions and hooks |
