@@ -49,7 +49,7 @@ The top bar leads to two screens, and a third opens from either of them:
 
 - **Requests**, the home screen: every request, latest change first. "Asked for" is the discount of the latest revision; "Approved in force" is the discount the mortgage process reads, which can come from an earlier revision. "Next step" says what a request needs from the acting user. The application id opens the request.
 - **Request detail:** "Latest revision" with its discount and reason, and "Next step" with the "Revise" button for the manager who created the request, or the form to approve or decline for a reviewer. "History" below lists every revision with its decision and marks the one in force.
-- **Applications:** every application with "View request", or "New request" for a relationship manager when it has none. For the mortgage process each row shows the approved discount, and choosing that user opens this screen.
+- **Applications:** every application with "View request", or "New request" for a relationship manager when it has none. For the mortgage process each row shows the approved discount, if any, and choosing that user opens this screen.
 
 An action that is not part of the user's role is hidden. One that is part of the role but not possible now is replaced by a sentence that says why, for example "Another reviewer must decide on your request." There is no automatic refresh: "Refresh" reads a screen again.
 
@@ -57,7 +57,7 @@ An action that is not part of the user's role is hidden. One that is part of the
 
 This page uses four terms. [docs/state-model.md](docs/state-model.md) defines the first three in full.
 
-- **Revision:** one proposal, a discount and a reason. A revision never changes; a change to a request is a new revision with the next number.
+- **Revision:** one proposal, a discount and a reason. A revision's discount and reason never change; changing either creates a new revision with the next number.
 - **Version:** a counter on the request that increases with every revise and every decision. A client sends the version it saw, and the server refuses the call if the request changed since.
 - **Approval in force:** the approved revision with the highest number. It is what the mortgage process reads. It is not the highest discount and not always the latest revision.
 - **bps:** basis points. 25 bps is 0.25 percentage points.
