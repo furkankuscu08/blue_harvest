@@ -204,11 +204,13 @@ What a client needs on top, and this exercise does not have: an approved list of
 
 ## Known limits
 
+- The `X-User-Id` header selects a seeded user. Anyone can act as anyone.
 - SQLite allows one writer at a time. That is enough here and not for a busy service.
 - A response that is lost after the request was stored cannot be produced reliably by hand in a browser. The replay is proven by the API tests and the smoke script, not by the UI check.
 - The UI keeps the idempotency key in the page only. After a page reload, sending the same create again gets `REQUEST_ALREADY_EXISTS` if the earlier one was stored, and the UI links to the existing request.
 - Applications and users are seed data. Only `APP-1001` starts without a request, so a second create needs a seed reset.
 - Idempotency records do not expire. Only a seed reset removes them.
+- A reviewer cannot cancel an approval. Declining a new revision leaves the earlier approval in force, and an approval has no end date.
 - GitHub does not enforce the merge gate: branch protection is not available for a private repository on a free account. The gate is a working rule, that nothing is merged before CI passes on the head commit.
 - The guard experiment covers two deliberately created gaps.
 
